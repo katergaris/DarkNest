@@ -1,0 +1,19 @@
+{
+  "name": "darknest",
+  "version": "1.0.0",
+  "description": "Spazio personale self-hosted: idee, progetti, vault password, account, drive documenti e fascicoli collegati.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.3.0",
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "multer": "^1.4.5-lts.1"
+  }
+}
