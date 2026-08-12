@@ -1,5 +1,7 @@
-require('dotenv').config();
 const path = require('path');
+// Percorso esplicito: cosi' "node server/index.js" trova il file .env anche
+// se viene lanciato da una cartella diversa da quella del progetto.
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const express = require('express');
 const session = require('express-session');
 const auth = require('./auth');
@@ -122,12 +124,33 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(429).json({ error: `Troppi tentativi falliti. Riprova tra ${minutes} minuti.` });
   }
 
-  const { username, password } = req.body || {};
-  if (!auth.verifyUser(username, password)) {
+  const { username, password, code } = req.body || {};
+  const registraFallimento = () => {
     const count = (entry ? entry.count : 0) + 1;
     pruneAttempts();
     loginAttempts.set(ip, { count, until: Date.now() + LOCK_MS });
+  };
+
+  if (!auth.verifyUser(username, password)) {
+    registraFallimento();
     return res.status(401).json({ error: 'Credenziali non valide' });
+  }
+
+  // Secondo fattore: la password da sola non basta se l'utente ha attivato
+  // l'app di autenticazione. Nessuna sessione viene creata prima del codice.
+  if (auth.twoFactorEnabled(username)) {
+    if (!code) {
+      return res.status(401).json({ totpRequired: true, error: 'Serve il codice dell\'app di autenticazione' });
+    }
+    const clean = String(code).trim();
+    // Un codice a 6 cifre viene dall'app; qualsiasi altra cosa e' un codice di recupero.
+    const valido = /^\d{6}$/.test(clean.replace(/\s/g, ''))
+      ? auth.verifyTotp(username, clean)
+      : auth.verifyRecoveryCode(username, clean);
+    if (!valido) {
+      registraFallimento();
+      return res.status(401).json({ totpRequired: true, error: 'Codice non valido o gia\' usato' });
+    }
   }
 
   loginAttempts.delete(ip);
@@ -148,6 +171,7 @@ app.use('/api/dossiers', auth.requireAuth, require('./routes/dossiers'));
 app.use('/api/search', auth.requireAuth, require('./routes/search'));
 app.use('/api/trash', auth.requireAuth, require('./routes/trash'));
 app.use('/api/backup', auth.requireAuth, require('./routes/backup'));
+app.use('/api/security', auth.requireAuth, require('./routes/security'));
 
 // Una rotta /api inesistente deve rispondere 404 JSON: senza questo finiva nel
 // catch-all qui sotto e il client riceveva la index.html con status 200.

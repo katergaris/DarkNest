@@ -446,3 +446,70 @@ input:focus, textarea:focus, select:focus {
   .sidebar-footer { flex-direction: row; }
   .view-root { padding: 20px 16px 40px; }
 }
+
+/* --- Sicurezza / verifica in due passaggi --- */
+.field-hint {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 400;
+  margin-top: 4px;
+}
+
+.totp-setup { max-width: 420px; }
+
+.totp-steps {
+  margin: 0 0 14px;
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.totp-steps strong { color: var(--text); }
+
+/* Sfondo chiaro fisso dietro al QR: i lettori hanno bisogno del contrasto
+   moduli scuri su fondo chiaro, che il tema scuro dell'app non garantisce. */
+.qr-box {
+  background: #FFFFFF;
+  padding: 12px;
+  border-radius: var(--radius);
+  width: fit-content;
+  margin: 0 auto 14px;
+  line-height: 0;
+}
+.qr-box svg { display: block; width: 200px; height: 200px; }
+
+.totp-secret, .cmd-line {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--accent-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-top: 6px;
+  word-break: break-all;
+}
+
+.recovery-codes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin: 14px 0;
+}
+.recovery-codes code {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 4px;
+}
+
+@media (max-width: 460px) {
+  .recovery-codes { grid-template-columns: 1fr; }
+}

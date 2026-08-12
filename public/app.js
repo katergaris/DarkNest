@@ -8,14 +8,22 @@
       headers: opts.body instanceof FormData ? {} : { 'Content-Type': 'application/json' },
       ...opts,
     });
-    if (res.status === 401) {
+    // Un 401 sulle rotte di accesso e' una credenziale sbagliata, non una
+    // sessione scaduta: va lasciato passare alla schermata di login, che sa
+    // spiegare cosa manca (password errata, codice a due fattori, ...).
+    if (res.status === 401 && !path.startsWith('/auth/')) {
       showAuthScreen();
       throw new Error('Sessione scaduta');
     }
     if (res.status === 204) return null;
     let data = null;
     try { data = await res.json(); } catch (e) { /* corpo vuoto */ }
-    if (!res.ok) throw new Error((data && data.error) || 'Errore imprevisto');
+    if (!res.ok) {
+      const err = new Error((data && data.error) || 'Errore imprevisto');
+      err.status = res.status;
+      err.data = data || {};
+      throw err;
+    }
     return data;
   }
 
@@ -81,6 +89,14 @@
   function el(html) {
     const div = document.createElement('div');
     div.innerHTML = html.trim();
+    // Con piu' elementi al primo livello restituiamo un frammento: prima ne
+    // usciva solo il primo e il resto spariva senza avvisare (era il caso del
+    // divisore della dashboard e dei testi di aiuto di Vault e Fascicoli).
+    if (div.children.length > 1) {
+      const frag = document.createDocumentFragment();
+      while (div.firstChild) frag.appendChild(div.firstChild);
+      return frag;
+    }
     return div.firstElementChild;
   }
 
@@ -112,19 +128,34 @@
     showAuthScreen();
   }
 
+  const authCodeRow = document.getElementById('auth-code-row');
+  const authCodeInput = document.getElementById('auth-code');
+
   authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     authError.classList.add('hidden');
     const username = document.getElementById('auth-username').value.trim();
     const password = document.getElementById('auth-password').value;
+    const code = authCodeInput.value.trim();
     try {
       if (setupMode) {
         await api('/auth/setup', { method: 'POST', body: JSON.stringify({ username, password }) });
       } else {
-        await api('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+        await api('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify(code ? { username, password, code } : { username, password }),
+        });
       }
       startApp();
     } catch (err) {
+      // La password e' giusta ma manca il secondo fattore: mostriamo il campo
+      // del codice invece di far ricominciare da capo.
+      if (err.data && err.data.totpRequired) {
+        authCodeRow.classList.remove('hidden');
+        authCodeInput.value = '';
+        authCodeInput.focus();
+        authSubmit.textContent = 'Verifica ed entra';
+      }
       authError.textContent = err.message;
       authError.classList.remove('hidden');
     }
@@ -845,6 +876,193 @@
       });
       root.appendChild(row);
     });
+  };
+
+  // ==================================================================
+  // SICUREZZA (verifica in due passaggi)
+  // ==================================================================
+  function showRecoveryCodes(codes) {
+    const wrap = el('<div></div>');
+    wrap.appendChild(el(`
+      <p class="card-sub">Conservali <strong>ora</strong>: stampali o mettili in un posto sicuro,
+      lontano dal telefono. Ognuno funziona una volta sola e servono per entrare se perdi
+      il telefono. Non potrai piu' rivederli.</p>
+    `));
+    const list = el('<div class="recovery-codes"></div>');
+    codes.forEach((c) => list.appendChild(el(`<code>${esc(c)}</code>`)));
+    wrap.appendChild(list);
+
+    const actions = el('<div class="form-actions"></div>');
+    const copy = el('<button type="button" class="btn btn-ghost">Copia tutti</button>');
+    copy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(codes.join('\n'));
+        toast('Codici copiati');
+      } catch (e) {
+        toast('Copia non riuscita: selezionali a mano');
+      }
+    });
+    const done = el('<button type="button" class="btn btn-primary">Li ho salvati</button>');
+    done.addEventListener('click', () => { closeModal(); render('security'); });
+    actions.appendChild(copy);
+    actions.appendChild(done);
+    wrap.appendChild(actions);
+    openModal('Codici di recupero', wrap);
+  }
+
+  function askPassword(title, testo, onConfirm) {
+    const form = el(`
+      <form class="modal-body" style="padding:0">
+        <p class="card-sub">${esc(testo)}</p>
+        <div class="form-row"><label>Password</label><input type="password" name="password" required /></div>
+        <p class="form-error hidden" data-err></p>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" data-cancel>Annulla</button>
+          <button type="submit" class="btn btn-primary">Conferma</button>
+        </div>
+      </form>
+    `);
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = form.querySelector('[data-err]');
+      errEl.classList.add('hidden');
+      try {
+        await onConfirm(form.password.value);
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+      }
+    });
+    form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+    openModal(title, form);
+  }
+
+  function startTotpSetup() {
+    api('/security/totp/setup', { method: 'POST' }).then((data) => {
+      const wrap = el('<div class="totp-setup"></div>');
+      wrap.appendChild(el(`
+        <ol class="totp-steps">
+          <li>Apri <strong>Google Authenticator</strong> (o Aegis, 1Password, Authy: vanno tutte bene) e tocca "+".</li>
+          <li>Scegli "Scansiona un codice QR" e inquadra questo:</li>
+        </ol>
+      `));
+      const qr = el(`<div class="qr-box">${data.qr}</div>`);
+      wrap.appendChild(qr);
+      wrap.appendChild(el(`
+        <p class="card-sub">Se non riesci a inquadrarlo, nell'app scegli "Inserisci chiave di configurazione"
+        e digita:<br /><code class="totp-secret">${esc(data.secret)}</code></p>
+      `));
+
+      const form = el(`
+        <form class="modal-body" style="padding:0">
+          <div class="form-row">
+            <label>Scrivi il codice a 6 cifre che vedi nell'app</label>
+            <input type="text" name="code" inputmode="numeric" maxlength="7" placeholder="123456" required />
+          </div>
+          <p class="form-error hidden" data-err></p>
+          <div class="form-actions">
+            <button type="button" class="btn btn-ghost" data-cancel>Annulla</button>
+            <button type="submit" class="btn btn-primary">Attiva</button>
+          </div>
+        </form>
+      `);
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errEl = form.querySelector('[data-err]');
+        errEl.classList.add('hidden');
+        try {
+          const res = await api('/security/totp/enable', {
+            method: 'POST',
+            body: JSON.stringify({ code: form.code.value }),
+          });
+          closeModal();
+          toast('Verifica in due passaggi attiva');
+          showRecoveryCodes(res.recoveryCodes);
+        } catch (err) {
+          errEl.textContent = err.message;
+          errEl.classList.remove('hidden');
+        }
+      });
+      form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+      wrap.appendChild(form);
+      openModal('Attiva la verifica in due passaggi', wrap);
+    });
+  }
+
+  views.security = async (root) => {
+    const info = await api('/security');
+    root.innerHTML = '';
+    root.appendChild(el('<div class="view-header"><h2>Sicurezza</h2></div>'));
+
+    const block = el('<div class="section-block"><h3>Verifica in due passaggi</h3></div>');
+
+    if (!info.totpEnabled) {
+      block.appendChild(el(`
+        <p class="card-sub">Non attiva: per entrare basta la password. Attivandola servira' anche
+        un codice a 6 cifre generato dal telefono, che cambia ogni 30 secondi.
+        Funziona senza connessione a internet e senza inviare nulla a nessuno.</p>
+      `));
+      const btn = el('<button class="btn btn-primary">Attiva con QR</button>');
+      btn.addEventListener('click', startTotpSetup);
+      block.appendChild(btn);
+    } else {
+      block.appendChild(el(`
+        <p class="card-sub">Attiva. All'accesso viene chiesto il codice dell'app di autenticazione.</p>
+        <p class="card-sub">Codici di recupero ancora utilizzabili: <strong>${info.recoveryCodesLeft}</strong> su 8.</p>
+      `));
+      const actions = el('<div class="card-actions" style="padding:12px 0 0"></div>');
+
+      const nuovi = el('<button class="btn btn-sm">Genera nuovi codici di recupero</button>');
+      nuovi.addEventListener('click', () => {
+        askPassword(
+          'Nuovi codici di recupero',
+          'I codici precedenti smetteranno di funzionare. Conferma con la tua password.',
+          async (password) => {
+            const res = await api('/security/totp/recovery-codes', {
+              method: 'POST',
+              body: JSON.stringify({ password }),
+            });
+            closeModal();
+            showRecoveryCodes(res.recoveryCodes);
+          }
+        );
+      });
+
+      const off = el('<button class="btn btn-sm btn-danger">Disattiva</button>');
+      off.addEventListener('click', () => {
+        askPassword(
+          'Disattiva la verifica in due passaggi',
+          'Dopo la disattivazione per entrare bastera\' di nuovo la sola password. Conferma con la tua password.',
+          async (password) => {
+            await api('/security/totp/disable', { method: 'POST', body: JSON.stringify({ password }) });
+            closeModal();
+            toast('Verifica in due passaggi disattivata');
+            render('security');
+          }
+        );
+      });
+
+      actions.appendChild(nuovi);
+      actions.appendChild(off);
+      block.appendChild(actions);
+
+      if (info.recoveryCodesLeft === 0) {
+        block.appendChild(el(`
+          <p class="form-error">Hai finito i codici di recupero: se perdi il telefono non potrai
+          piu' entrare dall'app. Generane di nuovi.</p>
+        `));
+      }
+    }
+
+    root.appendChild(block);
+
+    const help = el('<div class="section-block"><h3>Se perdi il telefono</h3></div>');
+    help.appendChild(el(`
+      <p class="card-sub">Usa uno dei codici di recupero al posto delle 6 cifre nella schermata di accesso.
+      Se non hai nemmeno quelli, dal computer dove gira DarkNest puoi disattivare la verifica con:</p>
+      <p><code class="cmd-line">docker compose exec darknest node server/disable-2fa.js</code></p>
+    `));
+    root.appendChild(help);
   };
 
   // ---------------- Global search ----------------

@@ -101,6 +101,28 @@ CREATE TABLE IF NOT EXISTS dossier_links (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(dossier_id, item_type, item_id)
 );
+
+CREATE TABLE IF NOT EXISTS recovery_codes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  used_at TEXT
+);
 `);
+
+// --- Migrazioni ---
+// Le colonne aggiunte dopo la prima versione non nascono dal CREATE TABLE qui
+// sopra (che non tocca le tabelle gia' esistenti): vanno aggiunte a mano sui
+// database creati con una versione precedente di DarkNest.
+function addColumn(table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (columns.some((c) => c.name === column)) return;
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
+addColumn('users', 'totp_secret', 'TEXT');
+addColumn('users', 'totp_enabled', 'INTEGER NOT NULL DEFAULT 0');
+addColumn('users', 'totp_last_step', 'INTEGER');
 
 module.exports = db;

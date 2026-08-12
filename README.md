@@ -75,6 +75,24 @@ Il conteggio riparte a ogni utilizzo: con `SESSION_DAYS=7`, se apri DarkNest alm
 
 > Con `SESSION_DAYS=0` chiunque usi quel browser entra senza password. Se il computer è condiviso, imposta un numero di giorni oppure ricordati di premere "Esci".
 
+## Verifica in due passaggi (Google Authenticator)
+
+Facoltativa, si attiva da **Sicurezza** nel menu laterale. Una volta attiva, per entrare servono la password *e* un codice a 6 cifre generato dal telefono.
+
+1. Premi "Attiva con QR": DarkNest mostra un codice QR.
+2. Apri **Google Authenticator** (vanno bene anche Aegis, 1Password, Authy, Bitwarden: è lo standard TOTP, non un meccanismo proprietario di Google) e inquadralo. Se la fotocamera non collabora, nell'app scegli "Inserisci chiave di configurazione" e digita il segreto scritto sotto al QR.
+3. Scrivi il codice a 6 cifre che compare nell'app per confermare, e **salva gli 8 codici di recupero** che ti vengono mostrati: sono l'unica via di rientro se perdi il telefono, si vedono una volta sola e ognuno funziona una volta sola.
+
+Il QR viene disegnato dal tuo server e i codici sono calcolati dall'ora corrente: **non serve connessione a internet** e nessun dato viene inviato a Google o a chiunque altro.
+
+**Se perdi il telefono:** scrivi uno dei codici di recupero al posto delle 6 cifre nella schermata di accesso. Se hai perso anche quelli, dal computer dove gira DarkNest:
+
+```bash
+docker compose exec darknest node server/disable-2fa.js
+```
+
+> La verifica in due passaggi protegge l'*accesso all'app*, non i dati sul disco: chi ha in mano il file `.env` e il database può comunque decifrare il vault. Serve contro chi indovina o ruba la password, non contro chi ha accesso fisico al server.
+
 ## Backup
 
 Dal menu laterale, "Esporta backup" scarica uno `.zip` con il database e tutti i documenti del Drive. Conservalo, insieme a una copia del file `.env`, in un posto sicuro e separato dal server.
@@ -122,7 +140,8 @@ rm -rf data uploads   # attenzione: cancella tutti i dati salvati
 ## Sicurezza — cosa sapere
 
 - Le password del vault sono cifrate con AES-256-GCM; la chiave deriva dalla `ENCRYPTION_KEY` che imposti tu (o che lo script genera per te) e non viene mai salvata nel database.
-- L'accesso all'app è protetto da un singolo utente (username + password, hash bcrypt) con sessione via cookie.
+- L'accesso all'app è protetto da un singolo utente (username + password, hash bcrypt) con sessione via cookie, e facoltativamente da una verifica in due passaggi con app di autenticazione (TOTP).
+- Dopo 10 tentativi di accesso falliti dallo stesso indirizzo, il login si blocca per 15 minuti.
 - Questo è uno strumento pensato per uso personale su una rete che controlli (rete domestica, VPN, NAS). Non ha avuto un audit di sicurezza professionale: per password particolarmente critiche, valuta di affiancare uno strumento dedicato e verificato come Vaultwarden, usando DarkNest per il resto.
 - Se esponi DarkNest su internet, mettilo dietro HTTPS (es. reverse proxy con Caddy/Traefik/Nginx) e considera un livello aggiuntivo di autenticazione (es. VPN).
 
@@ -141,7 +160,9 @@ darknest/
 │   ├── db.js                # connessione SQLite e schema
 │   ├── crypto.js             # cifratura AES-256-GCM del vault
 │   ├── auth.js                 # setup utente, login, middleware
-│   ├── session-store.js         # sessioni salvate su SQLite (sopravvivono ai riavvii)
+│   ├── totp.js                  # verifica in due passaggi (TOTP, RFC 6238)
+│   ├── disable-2fa.js            # disattiva il 2FA da riga di comando (telefono perso)
+│   ├── session-store.js           # sessioni salvate su SQLite (sopravvivono ai riavvii)
 │   └── routes/                  # API REST per ogni sezione
 └── public/                       # frontend (HTML/CSS/JS, nessuna build richiesta)
 ```

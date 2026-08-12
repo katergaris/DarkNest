@@ -34,6 +34,12 @@
         Password
         <input type="password" id="auth-password" autocomplete="current-password" required />
       </label>
+      <label id="auth-code-row" class="hidden">
+        Codice di verifica
+        <input type="text" id="auth-code" autocomplete="one-time-code" inputmode="numeric"
+               placeholder="6 cifre dall'app" maxlength="14" />
+        <span class="field-hint">Oppure uno dei codici di recupero, se non hai il telefono.</span>
+      </label>
       <p id="auth-error" class="form-error hidden"></p>
       <button type="submit" class="btn btn-primary" id="auth-submit">Entra</button>
     </form>
@@ -61,6 +67,7 @@
       <button class="nav-item" data-view="drive"><span class="nav-dot">◆</span>Drive</button>
       <button class="nav-item" data-view="dossiers"><span class="nav-dot">◆</span>Fascicoli</button>
       <button class="nav-item" data-view="trash"><span class="nav-dot">◆</span>Cestino</button>
+      <button class="nav-item" data-view="security"><span class="nav-dot">◆</span>Sicurezza</button>
     </nav>
 
     <div class="sidebar-footer">
