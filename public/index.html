@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DarkNest</title>
+<link rel="icon" href="data:," />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+<!-- Schermata di setup / login -->
+<div id="auth-screen" class="auth-screen hidden">
+  <div class="auth-card">
+    <div class="nest-mark" aria-hidden="true">
+      <svg viewBox="0 0 64 64" width="48" height="48">
+        <path d="M8 40 C8 24, 20 14, 32 14 C44 14, 56 24, 56 40" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/>
+        <path d="M14 44 C14 30, 22 20, 32 20 C42 20, 50 30, 50 44" fill="none" stroke="var(--accent-soft)" stroke-width="3" stroke-linecap="round"/>
+        <path d="M20 47 C20 36, 25 27, 32 27 C39 27, 44 36, 44 47" fill="none" stroke="var(--text-muted)" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="32" cy="41" r="4.5" fill="var(--accent)"/>
+      </svg>
+    </div>
+    <h1>DarkNest</h1>
+    <p class="auth-sub" id="auth-sub">Il tuo spazio personale, al sicuro.</p>
+
+    <form id="auth-form" class="auth-form">
+      <label>
+        Username
+        <input type="text" id="auth-username" autocomplete="username" required />
+      </label>
+      <label>
+        Password
+        <input type="password" id="auth-password" autocomplete="current-password" required />
+      </label>
+      <p id="auth-error" class="form-error hidden"></p>
+      <button type="submit" class="btn btn-primary" id="auth-submit">Entra</button>
+    </form>
+  </div>
+</div>
+
+<!-- App principale -->
+<div id="app" class="app hidden">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <svg viewBox="0 0 64 64" width="30" height="30" class="brand-mark">
+        <path d="M8 40 C8 24, 20 14, 32 14 C44 14, 56 24, 56 40" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>
+        <path d="M18 45 C18 32, 24 24, 32 24 C40 24, 46 32, 46 45" fill="none" stroke="var(--accent-soft)" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="32" cy="40" r="4" fill="var(--accent)"/>
+      </svg>
+      <span>DarkNest</span>
+    </div>
+
+    <nav class="nav" id="nav">
+      <button class="nav-item active" data-view="dashboard"><span class="nav-dot">◆</span>Dashboard</button>
+      <button class="nav-item" data-view="ideas"><span class="nav-dot">◆</span>Idee</button>
+      <button class="nav-item" data-view="projects"><span class="nav-dot">◆</span>Progetti</button>
+      <button class="nav-item" data-view="vault"><span class="nav-dot">◆</span>Vault</button>
+      <button class="nav-item" data-view="accounts"><span class="nav-dot">◆</span>Account</button>
+      <button class="nav-item" data-view="drive"><span class="nav-dot">◆</span>Drive</button>
+      <button class="nav-item" data-view="dossiers"><span class="nav-dot">◆</span>Fascicoli</button>
+      <button class="nav-item" data-view="trash"><span class="nav-dot">◆</span>Cestino</button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a class="btn btn-ghost btn-block" href="/api/backup" target="_blank" rel="noopener">Esporta backup</a>
+      <button class="btn btn-ghost btn-block" id="logout-btn">Esci</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="search-wrap">
+        <input type="text" id="global-search" placeholder="Cerca in tutto DarkNest…" autocomplete="off" />
+        <div id="search-results" class="search-results hidden"></div>
+      </div>
+    </header>
+
+    <section id="view-root" class="view-root">
+      <!-- le view vengono renderizzate qui via JS -->
+    </section>
+  </main>
+</div>
+
+<template id="tpl-modal">
+  <div class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title"></h3>
+        <button class="modal-close" aria-label="Chiudi">✕</button>
+      </div>
+      <div class="modal-body"></div>
+    </div>
+  </div>
+</template>
+
+<script src="/app.js"></script>
+</body>
+</html>
