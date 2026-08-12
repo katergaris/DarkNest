@@ -67,18 +67,29 @@ router.post('/:id/restore', (req, res) => {
 });
 
 router.post('/:id/links', (req, res) => {
-  const { item_type, item_id } = req.body;
-  if (!TABLES[item_type]) return res.status(400).json({ error: 'Tipo di elemento non valido' });
+  const { item_type, item_id } = req.body || {};
+  const def = TABLES[item_type];
+  if (!def) return res.status(400).json({ error: 'Tipo di elemento non valido' });
+  const itemId = Number.parseInt(item_id, 10);
+  if (!Number.isInteger(itemId)) return res.status(400).json({ error: 'Elemento non valido' });
+
   const dossier = db.prepare('SELECT * FROM dossiers WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
   if (!dossier) return res.status(404).json({ error: 'Fascicolo non trovato' });
+
+  // Senza questo controllo si potevano creare collegamenti verso elementi
+  // inesistenti o gia' nel cestino, che poi sparivano dal fascicolo senza spiegazione.
+  const item = db.prepare(`SELECT id FROM ${def.table} WHERE id = ? AND deleted_at IS NULL`).get(itemId);
+  if (!item) return res.status(404).json({ error: 'Elemento da collegare non trovato' });
+
   try {
     db.prepare('INSERT INTO dossier_links (dossier_id, item_type, item_id) VALUES (?, ?, ?)').run(
-      req.params.id,
+      dossier.id,
       item_type,
-      item_id
+      itemId
     );
   } catch (e) {
-    // link gia' esistente: ignora
+    // Collegamento gia' presente (vincolo UNIQUE): non e' un errore.
+    if (!String(e.code || '').includes('CONSTRAINT_UNIQUE')) throw e;
   }
   res.status(201).json(serializeDossier(dossier));
 });

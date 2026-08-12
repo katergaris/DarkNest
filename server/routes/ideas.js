@@ -26,7 +26,7 @@ router.put('/:id', (req, res) => {
   if (!existing) return res.status(404).json({ error: 'Idea non trovata' });
   db.prepare(
     "UPDATE ideas SET title = ?, body = ?, tags = ?, updated_at = datetime('now') WHERE id = ?"
-  ).run(title ?? existing.title, body ?? existing.body, JSON.stringify(tags ?? JSON.parse(existing.tags)), req.params.id);
+  ).run(title ?? existing.title, body ?? existing.body, JSON.stringify(tags ?? JSON.parse(existing.tags || '[]')), req.params.id);
   res.json(serialize(db.prepare('SELECT * FROM ideas WHERE id = ?').get(req.params.id)));
 });
 

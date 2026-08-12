@@ -13,9 +13,11 @@
   --danger: #C1543C;
   --danger-soft: #E08A73;
   --radius: 10px;
-  --font-display: 'Fraunces', serif;
-  --font-body: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  /* I font arrivano da Google Fonts: senza rete (installazione offline) devono
+     esserci alternative di sistema decenti, non il ripiego generico del browser. */
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 * { box-sizing: border-box; }

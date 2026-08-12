@@ -26,9 +26,16 @@ try {
 Write-Host "OK Docker trovato e avviato"
 
 # --- 2. Prepara il file .env ---
+# Il template puo' chiamarsi "env.example" o ".env.example": accettiamo entrambi.
+$template = @("env.example", ".env.example") | Where-Object { Test-Path $_ } | Select-Object -First 1
+
 if (-not (Test-Path ".env")) {
-  Copy-Item ".env.example" ".env"
-  Write-Host "OK Creato .env dal template"
+  if (-not $template) {
+    Write-Host "x Non trovo il file di esempio (env.example): scaricalo insieme al resto del progetto."
+    exit 1
+  }
+  Copy-Item $template ".env"
+  Write-Host "OK Creato .env dal template ($template)"
 } else {
   Write-Host "OK File .env già presente, lo riuso"
 }
@@ -71,7 +78,12 @@ function Test-PortFree($port) {
 
 $currentPort = 3000
 $match = Select-String -Path ".env" -Pattern "^HOST_PORT=(.*)" -ErrorAction SilentlyContinue
-if ($match) { $currentPort = [int]$match.Matches[0].Groups[1].Value }
+if ($match) {
+  # Il valore puo' portarsi dietro spazi o un ritorno a capo (file con fine riga
+  # Windows): senza Trim() la conversione a intero faceva fallire lo script.
+  $raw = $match.Matches[0].Groups[1].Value.Trim()
+  if ($raw -match '^\d+$') { $currentPort = [int]$raw }
+}
 
 $candidatePort = $currentPort
 $attempts = 0
@@ -89,8 +101,10 @@ if ($attempts -ge 50) {
 if ($candidatePort -ne $currentPort) {
   Write-Host "! La porta $currentPort risulta occupata: uso la $candidatePort al suo posto."
   $envContent = Get-Content ".env" -Raw
-  if ($envContent -match "^HOST_PORT=.*") {
-    $envContent = $envContent -replace "^HOST_PORT=.*", "HOST_PORT=$candidatePort"
+  # (?m) e' indispensabile: senza, "^" trova solo l'inizio del file e HOST_PORT
+  # (che non e' la prima riga) non veniva mai sostituito, ma duplicato in fondo.
+  if ($envContent -match "(?m)^HOST_PORT=.*") {
+    $envContent = $envContent -replace "(?m)^HOST_PORT=.*", "HOST_PORT=$candidatePort"
   } else {
     $envContent += "`nHOST_PORT=$candidatePort"
   }

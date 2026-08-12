@@ -11,6 +11,9 @@ function createUser(username, password) {
 }
 
 function verifyUser(username, password) {
+  // bcrypt.compareSync solleva un'eccezione se gli argomenti non sono stringhe:
+  // con un corpo della richiesta incompleto il login deve solo fallire.
+  if (typeof username !== 'string' || typeof password !== 'string' || !password) return false;
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
   if (!user) return false;
   return bcrypt.compareSync(password, user.password_hash);

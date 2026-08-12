@@ -34,8 +34,8 @@ router.put('/:id', (req, res) => {
     title ?? existing.title,
     description ?? existing.description,
     finalStatus,
-    JSON.stringify(checklist ?? JSON.parse(existing.checklist)),
-    JSON.stringify(tags ?? JSON.parse(existing.tags)),
+    JSON.stringify(checklist ?? JSON.parse(existing.checklist || '[]')),
+    JSON.stringify(tags ?? JSON.parse(existing.tags || '[]')),
     req.params.id
   );
   res.json(serialize(db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id)));

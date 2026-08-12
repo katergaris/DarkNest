@@ -13,7 +13,10 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => {
     const unique = crypto.randomBytes(16).toString('hex');
-    cb(null, unique + path.extname(file.originalname));
+    // L'estensione arriva dal client: la accettiamo solo se e' davvero
+    // un'estensione semplice, per non costruire nomi di file inattesi.
+    const ext = path.extname(path.basename(file.originalname || ''));
+    cb(null, unique + (/^\.[A-Za-z0-9]{1,12}$/.test(ext) ? ext.toLowerCase() : ''));
   },
 });
 const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
@@ -47,7 +50,7 @@ router.post('/', upload.single('file'), (req, res) => {
 router.get('/:id/download', (req, res) => {
   const doc = db.prepare('SELECT * FROM documents WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
   if (!doc) return res.status(404).json({ error: 'Documento non trovato' });
-  const filePath = path.join(UPLOAD_DIR, doc.stored_name);
+  const filePath = path.join(UPLOAD_DIR, path.basename(doc.stored_name));
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File mancante su disco' });
   res.download(filePath, doc.original_name);
 });
@@ -58,7 +61,7 @@ router.put('/:id', (req, res) => {
   const { folder, tags, expiry_date } = req.body;
   db.prepare('UPDATE documents SET folder = ?, tags = ?, expiry_date = ? WHERE id = ?').run(
     folder ?? existing.folder,
-    JSON.stringify(tags ?? JSON.parse(existing.tags)),
+    JSON.stringify(tags ?? JSON.parse(existing.tags || '[]')),
     expiry_date !== undefined ? expiry_date : existing.expiry_date,
     req.params.id
   );

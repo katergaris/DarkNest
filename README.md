@@ -48,7 +48,7 @@ Lo script controlla che Docker sia installato e avviato, crea automaticamente il
 Se preferisci farlo a mano:
 
 ```bash
-cp .env.example .env
+cp env.example .env
 # apri .env e sostituisci i due valori segnaposto con stringhe casuali lunghe
 docker compose up -d --build
 ```
@@ -118,7 +118,7 @@ darknest/
 ├── setup.sh / setup.ps1   # installazione guidata (Linux-macOS / Windows)
 ├── docker-compose.yml
 ├── Dockerfile
-├── .env.example
+├── env.example
 ├── LICENSE
 ├── package.json
 ├── server/
@@ -126,6 +126,7 @@ darknest/
 │   ├── db.js                # connessione SQLite e schema
 │   ├── crypto.js             # cifratura AES-256-GCM del vault
 │   ├── auth.js                 # setup utente, login, middleware
+│   ├── session-store.js         # sessioni salvate su SQLite (sopravvivono ai riavvii)
 │   └── routes/                  # API REST per ogni sezione
 └── public/                       # frontend (HTML/CSS/JS, nessuna build richiesta)
 ```

@@ -52,7 +52,7 @@ router.put('/:id', (req, res) => {
     password ? encrypt(password) : existing.password_encrypted,
     url ?? existing.url,
     notes ?? existing.notes,
-    JSON.stringify(tags ?? JSON.parse(existing.tags)),
+    JSON.stringify(tags ?? JSON.parse(existing.tags || '[]')),
     req.params.id
   );
   res.json(serialize(db.prepare('SELECT * FROM vault_entries WHERE id = ?').get(req.params.id)));

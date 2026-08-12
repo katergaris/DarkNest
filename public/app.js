@@ -33,13 +33,22 @@
     }[c]));
   }
 
+  // Il testo va accorciato PRIMA di essere convertito in HTML: tagliando dopo
+  // l'escape si poteva spezzare un'entita' (&amp; -> &am) e sporcare la pagina.
+  function escTrim(str, max) {
+    const s = String(str ?? '');
+    return esc(s.length > max ? s.slice(0, max) + '…' : s);
+  }
+
   function fmtDate(d) {
     if (!d) return '—';
     try { return new Date(d).toLocaleDateString('it-IT'); } catch (e) { return d; }
   }
 
   function fmtSize(bytes) {
-    if (!bytes) return '0 KB';
+    if (!bytes) return '0 B';
+    // Sotto il KB mostriamo i byte: prima qualsiasi file piccolo risultava "0 KB".
+    if (bytes < 1024) return `${bytes} B`;
     const kb = bytes / 1024;
     if (kb < 1024) return `${kb.toFixed(0)} KB`;
     return `${(kb / 1024).toFixed(1)} MB`;
@@ -64,6 +73,10 @@
   function closeModal() {
     if (activeModal) { activeModal.remove(); activeModal = null; }
   }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
 
   function el(html) {
     const div = document.createElement('div');
@@ -118,7 +131,11 @@
   });
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
-    await api('/auth/logout', { method: 'POST' });
+    try {
+      await api('/auth/logout', { method: 'POST' });
+    } catch (err) {
+      // Anche se la chiamata fallisce ricarichiamo: la sessione va comunque chiusa lato client.
+    }
     location.reload();
   });
 
@@ -288,7 +305,7 @@
       const card = el(`
         <div class="card">
           <p class="card-title">${esc(idea.title)}</p>
-          <p class="card-body">${esc(idea.body).slice(0, 220)}</p>
+          <p class="card-body">${escTrim(idea.body, 220)}</p>
           <div class="tag-row">${(idea.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
           <div class="card-actions">
             <button class="btn btn-sm" data-edit>Modifica</button>
@@ -394,7 +411,7 @@
         <div class="card">
           <span class="status-pill status-${p.status}">${p.status.replace('_', ' ')}</span>
           <p class="card-title">${esc(p.title)}</p>
-          <p class="card-body">${esc(p.description).slice(0, 160)}</p>
+          <p class="card-body">${escTrim(p.description, 160)}</p>
           ${total ? `<p class="card-sub">Checklist: ${done}/${total} completati</p>` : ''}
           <div class="tag-row">${(p.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
           <div class="card-actions">
@@ -840,7 +857,17 @@
     const q = searchInput.value.trim();
     if (!q) { searchResults.classList.add('hidden'); return; }
     searchTimer = setTimeout(async () => {
-      const results = await api('/search?q=' + encodeURIComponent(q));
+      let results;
+      try {
+        results = await api('/search?q=' + encodeURIComponent(q));
+      } catch (err) {
+        searchResults.innerHTML = '';
+        searchResults.appendChild(el(`<div class="search-result-item">${esc(err.message)}</div>`));
+        searchResults.classList.remove('hidden');
+        return;
+      }
+      // La ricerca puo' rispondere fuori ordine: ignoriamo i risultati vecchi.
+      if (searchInput.value.trim() !== q) return;
       searchResults.innerHTML = '';
       if (!results.length) {
         searchResults.appendChild(el('<div class="search-result-item">Nessun risultato</div>'));
@@ -864,6 +891,18 @@
     if (!e.target.closest('.search-wrap')) searchResults.classList.add('hidden');
   });
 
+  // Molti handler fanno "await api(...)" senza try/catch: senza questa rete di
+  // sicurezza un errore restava solo in console e per l'utente non succedeva nulla.
+  window.addEventListener('unhandledrejection', (e) => {
+    const msg = e.reason && e.reason.message ? e.reason.message : 'Errore imprevisto';
+    if (msg !== 'Sessione scaduta') toast(msg);
+    e.preventDefault();
+  });
+
   // ---------------- Avvio ----------------
-  checkAuth();
+  checkAuth().catch((err) => {
+    authError.textContent = err.message;
+    authError.classList.remove('hidden');
+    showAuthScreen();
+  });
 })();

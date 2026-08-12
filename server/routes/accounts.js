@@ -32,7 +32,7 @@ router.put('/:id', (req, res) => {
     plan ?? existing.plan,
     renewal_date !== undefined ? renewal_date : existing.renewal_date,
     notes ?? existing.notes,
-    JSON.stringify(tags ?? JSON.parse(existing.tags)),
+    JSON.stringify(tags ?? JSON.parse(existing.tags || '[]')),
     req.params.id
   );
   res.json(serialize(db.prepare('SELECT * FROM accounts WHERE id = ?').get(req.params.id)));

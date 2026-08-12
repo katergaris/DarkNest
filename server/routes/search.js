@@ -2,33 +2,40 @@ const express = require('express');
 const db = require('../db');
 const router = express.Router();
 
+// In LIKE i caratteri % e _ sono jolly: senza escape cercare "100%" o "a_b"
+// restituiva risultati non pertinenti (o addirittura tutto il contenuto).
+function likePattern(raw) {
+  return `%${raw.replace(/[\\%_]/g, (c) => '\\' + c)}%`;
+}
+
 router.get('/', (req, res) => {
-  const q = `%${(req.query.q || '').trim()}%`;
-  if (!q || q === '%%') return res.json([]);
+  const raw = String(req.query.q || '').trim();
+  if (!raw) return res.json([]);
+  const q = likePattern(raw);
 
   const results = [];
 
-  db.prepare("SELECT id, title FROM ideas WHERE deleted_at IS NULL AND (title LIKE ? OR body LIKE ? OR tags LIKE ?)")
+  db.prepare("SELECT id, title FROM ideas WHERE deleted_at IS NULL AND (title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\')")
     .all(q, q, q)
     .forEach((r) => results.push({ type: 'idea', id: r.id, label: r.title }));
 
-  db.prepare("SELECT id, title FROM projects WHERE deleted_at IS NULL AND (title LIKE ? OR description LIKE ? OR tags LIKE ?)")
+  db.prepare("SELECT id, title FROM projects WHERE deleted_at IS NULL AND (title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\')")
     .all(q, q, q)
     .forEach((r) => results.push({ type: 'project', id: r.id, label: r.title }));
 
-  db.prepare("SELECT id, site FROM vault_entries WHERE deleted_at IS NULL AND (site LIKE ? OR username LIKE ? OR notes LIKE ? OR tags LIKE ?)")
+  db.prepare("SELECT id, site FROM vault_entries WHERE deleted_at IS NULL AND (site LIKE ? ESCAPE '\\' OR username LIKE ? ESCAPE '\\' OR notes LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\')")
     .all(q, q, q, q)
     .forEach((r) => results.push({ type: 'vault', id: r.id, label: r.site }));
 
-  db.prepare("SELECT id, service FROM accounts WHERE deleted_at IS NULL AND (service LIKE ? OR email LIKE ? OR notes LIKE ? OR tags LIKE ?)")
+  db.prepare("SELECT id, service FROM accounts WHERE deleted_at IS NULL AND (service LIKE ? ESCAPE '\\' OR email LIKE ? ESCAPE '\\' OR notes LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\')")
     .all(q, q, q, q)
     .forEach((r) => results.push({ type: 'account', id: r.id, label: r.service }));
 
-  db.prepare("SELECT id, original_name FROM documents WHERE deleted_at IS NULL AND (original_name LIKE ? OR folder LIKE ? OR tags LIKE ?)")
+  db.prepare("SELECT id, original_name FROM documents WHERE deleted_at IS NULL AND (original_name LIKE ? ESCAPE '\\' OR folder LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\')")
     .all(q, q, q)
     .forEach((r) => results.push({ type: 'document', id: r.id, label: r.original_name }));
 
-  db.prepare("SELECT id, title FROM dossiers WHERE deleted_at IS NULL AND (title LIKE ? OR description LIKE ?)")
+  db.prepare("SELECT id, title FROM dossiers WHERE deleted_at IS NULL AND (title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\')")
     .all(q, q)
     .forEach((r) => results.push({ type: 'dossier', id: r.id, label: r.title }));
 
@@ -37,7 +44,10 @@ router.get('/', (req, res) => {
 
 // Elementi con scadenza vicina (account e documenti), usati per i promemoria
 router.get('/reminders/upcoming', (req, res) => {
-  const days = parseInt(req.query.days, 10) || 30;
+  const parsed = parseInt(req.query.days, 10);
+  // Un valore assente, negativo o assurdo rendeva la query priva di senso
+  // (finestra al passato o interrogazione senza limite).
+  const days = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 3650) : 30;
   const limit = `+${days} days`;
 
   const accounts = db

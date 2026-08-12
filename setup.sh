@@ -35,29 +35,47 @@ fi
 echo "✓ Docker trovato e avviato (userò: $COMPOSE)"
 
 # --- 2. Prepara il file .env ---
+# Il template puo' chiamarsi "env.example" o ".env.example": accettiamo entrambi.
+TEMPLATE=""
+for candidate in env.example .env.example; do
+  if [ -f "$candidate" ]; then TEMPLATE="$candidate"; break; fi
+done
+
 if [ ! -f .env ]; then
-  cp .env.example .env
-  echo "✓ Creato .env dal template"
+  if [ -z "$TEMPLATE" ]; then
+    echo "✗ Non trovo il file di esempio (env.example): scaricalo insieme al resto del progetto."
+    exit 1
+  fi
+  cp "$TEMPLATE" .env
+  echo "✓ Creato .env dal template ($TEMPLATE)"
 else
   echo "✓ File .env già presente, lo riuso"
 fi
 
+# openssl e node non sono garantiti su una macchina con solo Docker installato:
+# in loro assenza si ripiega su /dev/urandom.
 random_hex() {
   if command -v openssl >/dev/null 2>&1; then
     openssl rand -hex 32
-  else
+  elif command -v node >/dev/null 2>&1; then
     node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+  else
+    # od legge esattamente 32 byte e termina: niente SIGPIPE (che con
+    # "set -o pipefail" farebbe abortire lo script).
+    od -vN 32 -An -tx1 /dev/urandom | tr -d ' \n'
+    echo ""
   fi
 }
 
+# Test della porta in bash puro (/dev/tcp): se la connessione riesce c'e' gia'
+# qualcosa in ascolto. Prima serviva node, che spesso non e' installato: la
+# funzione falliva sempre e lo script concludeva che nessuna porta era libera.
 is_port_free() {
-  node -e "
-    const net = require('net');
-    const srv = net.createServer();
-    srv.once('error', () => process.exit(1));
-    srv.once('listening', () => srv.close(() => process.exit(0)));
-    srv.listen($1, '127.0.0.1');
-  " >/dev/null 2>&1
+  if (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; then
+    exec 3<&- 3>&-
+    return 1
+  fi
+  return 0
 }
 
 if grep -q "cambiami-con-una-stringa-lunga-e-casuale" .env; then
@@ -75,8 +93,10 @@ if grep -q "cambiami-con-una-passphrase-lunga-e-segreta" .env; then
 fi
 
 # --- 3. Trova una porta libera sul computer ---
-CURRENT_HOST_PORT="$(grep '^HOST_PORT=' .env | cut -d '=' -f2)"
-CURRENT_HOST_PORT="${CURRENT_HOST_PORT:-3000}"
+CURRENT_HOST_PORT="$(grep '^HOST_PORT=' .env | tail -n 1 | cut -d '=' -f2 | tr -d '\r[:space:]')"
+case "$CURRENT_HOST_PORT" in
+  ''|*[!0-9]*) CURRENT_HOST_PORT=3000 ;;
+esac
 CANDIDATE_PORT="$CURRENT_HOST_PORT"
 ATTEMPTS=0
 while ! is_port_free "$CANDIDATE_PORT" && [ "$ATTEMPTS" -lt 50 ]; do
