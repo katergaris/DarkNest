@@ -60,6 +60,21 @@ docker compose up -d --build
 
 Entrambe le cartelle sono montate come volumi Docker: i dati sopravvivono a riavvii e rebuild del container. Fanne comunque un backup periodico (vedi sotto) e **non cancellare mai `.env`** — contiene la chiave con cui sono cifrate le password nel vault.
 
+## Durata dell'accesso
+
+Di default **l'accesso non scade mai**: una volta entrato resti dentro finché non premi "Esci", anche dopo un riavvio del container.
+
+Se preferisci che l'accesso scada, imposta `SESSION_DAYS` nel file `.env` con il numero di giorni desiderato e riavvia (`docker compose up -d`):
+
+```bash
+SESSION_DAYS=0    # non scade mai (predefinito)
+SESSION_DAYS=7    # scade dopo 7 giorni in cui non apri mai DarkNest
+```
+
+Il conteggio riparte a ogni utilizzo: con `SESSION_DAYS=7`, se apri DarkNest almeno una volta a settimana non ti verrà mai richiesta la password. All'avvio il container scrive nei log quale impostazione è attiva.
+
+> Con `SESSION_DAYS=0` chiunque usi quel browser entra senza password. Se il computer è condiviso, imposta un numero di giorni oppure ricordati di premere "Esci".
+
 ## Backup
 
 Dal menu laterale, "Esporta backup" scarica uno `.zip` con il database e tutti i documenti del Drive. Conservalo, insieme a una copia del file `.env`, in un posto sicuro e separato dal server.

@@ -27,15 +27,33 @@ if (process.env.ENCRYPTION_KEY && PLACEHOLDER_VALUES.includes(process.env.ENCRYP
 }
 // ENCRYPTION_KEY viene ulteriormente validata (presenza/lunghezza minima) da server/crypto.js al primo require
 
+// --- Durata dell'accesso (SESSION_DAYS nel file .env) ---
+// 0 (valore predefinito) = l'accesso non scade mai da solo: si esce solo con
+// il pulsante "Esci". Un numero N > 0 = l'accesso dura N giorni, che ripartono
+// a ogni utilizzo ("rolling"): si viene disconnessi solo dopo N giorni di
+// inattivita' completa.
+const DAY_MS = 1000 * 60 * 60 * 24;
+const NEVER_MS = DAY_MS * 3650; // 10 anni: in pratica nessuna scadenza
+
+function sessionMaxAge() {
+  const raw = String(process.env.SESSION_DAYS ?? '').trim();
+  if (!raw) return NEVER_MS;
+  const days = Number(raw);
+  if (!Number.isFinite(days) || days <= 0) return NEVER_MS;
+  return Math.min(days, 3650) * DAY_MS;
+}
+
+const SESSION_MAX_AGE = sessionMaxAge();
+
 app.use(express.json({ limit: '2mb' }));
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
-    store: new SqliteStore(),
+    store: new SqliteStore({ ttlMs: SESSION_MAX_AGE }),
     resave: false,
     saveUninitialized: false,
     rolling: true,
-    cookie: { maxAge: 1000 * 60 * 60 * 24 * 14, sameSite: 'lax', httpOnly: true },
+    cookie: { maxAge: SESSION_MAX_AGE, sameSite: 'lax', httpOnly: true },
   })
 );
 
@@ -164,6 +182,11 @@ app.use((err, req, res, next) => {
 
 const server = app.listen(PORT, () => {
   console.log(`DarkNest in ascolto su http://localhost:${PORT}`);
+  console.log(
+    SESSION_MAX_AGE >= NEVER_MS
+      ? 'Accesso: nessuna scadenza automatica (imposta SESSION_DAYS nel file .env per cambiarla)'
+      : `Accesso: scade dopo ${Math.round(SESSION_MAX_AGE / DAY_MS)} giorni di inattivita'`
+  );
 });
 
 server.on('error', (err) => {
