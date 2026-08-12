@@ -2,9 +2,18 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>DarkNest</title>
-<link rel="icon" href="data:," />
+<meta name="theme-color" content="#1B1712" />
+<meta name="description" content="Il tuo spazio personale: idee, progetti, password, documenti." />
+<!-- Aggiunta alla schermata home del telefono -->
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="DarkNest" />
+<link rel="apple-touch-icon" href="/icon-192.png" />
+<link rel="icon" href="/icon.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css" />
@@ -58,17 +67,9 @@
       <span>DarkNest</span>
     </div>
 
-    <nav class="nav" id="nav">
-      <button class="nav-item active" data-view="dashboard"><span class="nav-dot">◆</span>Dashboard</button>
-      <button class="nav-item" data-view="ideas"><span class="nav-dot">◆</span>Idee</button>
-      <button class="nav-item" data-view="projects"><span class="nav-dot">◆</span>Progetti</button>
-      <button class="nav-item" data-view="vault"><span class="nav-dot">◆</span>Vault</button>
-      <button class="nav-item" data-view="accounts"><span class="nav-dot">◆</span>Account</button>
-      <button class="nav-item" data-view="drive"><span class="nav-dot">◆</span>Drive</button>
-      <button class="nav-item" data-view="dossiers"><span class="nav-dot">◆</span>Fascicoli</button>
-      <button class="nav-item" data-view="trash"><span class="nav-dot">◆</span>Cestino</button>
-      <button class="nav-item" data-view="security"><span class="nav-dot">◆</span>Sicurezza</button>
-    </nav>
+    <!-- Le voci vengono generate da app.js a partire da un unico elenco,
+         condiviso con la barra in basso del telefono. -->
+    <nav class="nav" id="nav"></nav>
 
     <div class="sidebar-footer">
       <a class="btn btn-ghost btn-block" href="/api/backup" target="_blank" rel="noopener">Esporta backup</a>
@@ -77,7 +78,10 @@
   </aside>
 
   <main class="main">
-    <header class="topbar">
+    <header class="topbar" id="topbar">
+      <!-- Su telefono la ricerca parte come icona e si apre al tocco: a schermo
+           pieno resta sempre visibile come prima. -->
+      <button class="icon-btn search-toggle" id="search-toggle" aria-label="Cerca" aria-expanded="false"></button>
       <div class="search-wrap">
         <input type="text" id="global-search" placeholder="Cerca in tutto DarkNest…" autocomplete="off" />
         <div id="search-results" class="search-results hidden"></div>
@@ -88,6 +92,12 @@
       <!-- le view vengono renderizzate qui via JS -->
     </section>
   </main>
+
+  <!-- Navigazione da telefono: barra fissa in basso + foglio con tutto il resto -->
+  <nav class="tabbar" id="tabbar" aria-label="Sezioni"></nav>
+  <div class="sheet-backdrop hidden" id="sheet-backdrop">
+    <div class="sheet" id="sheet" role="dialog" aria-label="Tutte le sezioni"></div>
+  </div>
 </div>
 
 <template id="tpl-modal">

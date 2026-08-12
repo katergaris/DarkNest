@@ -83,7 +83,13 @@
   }
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
+    if (e.key !== 'Escape') return;
+    closeModal();
+    const backdrop = document.getElementById('sheet-backdrop');
+    if (backdrop && !backdrop.classList.contains('hidden')) {
+      backdrop.classList.add('hidden');
+      document.body.classList.remove('no-scroll');
+    }
   });
 
   function el(html) {
@@ -161,14 +167,18 @@
     }
   });
 
-  document.getElementById('logout-btn').addEventListener('click', async () => {
+  // Dichiarazione (non costante) perche' viene usata anche dal foglio del
+  // telefono, costruito prima di questo punto del file.
+  async function logout() {
     try {
       await api('/auth/logout', { method: 'POST' });
     } catch (err) {
       // Anche se la chiamata fallisce ricarichiamo: la sessione va comunque chiusa lato client.
     }
     location.reload();
-  });
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', logout);
 
   function startApp() {
     authScreen.classList.add('hidden');
@@ -177,17 +187,116 @@
   }
 
   // ---------------- Navigation ----------------
+  // Icone di linea, disegnate qui per non dipendere da file o servizi esterni.
+  const ICONS = {
+    dashboard: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    ideas: '<path d="M9.5 18.5h5M10.5 21.5h3"/><path d="M12 2.5a6 6 0 0 0-3.4 10.9c.5.4.9 1 .9 1.7v.4h5v-.4c0-.7.4-1.3.9-1.7A6 6 0 0 0 12 2.5z"/>',
+    projects: '<path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6l1.3 1.3L7.3 4.8"/><path d="M3.5 12l1.3 1.3L7.3 10.8"/><path d="M3.5 18l1.3 1.3L7.3 16.8"/>',
+    vault: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/>',
+    accounts: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20.5c0-3.4 3.1-5.6 7-5.6s7 2.2 7 5.6"/>',
+    drive: '<path d="M3 7.5a2 2 0 0 1 2-2h3.8l2 2.5H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    dossiers: '<path d="M12 3l8.5 4.3L12 11.6 3.5 7.3z"/><path d="M3.5 12L12 16.3 20.5 12"/><path d="M3.5 16.5L12 20.8l8.5-4.3"/>',
+    trash: '<path d="M4 7h16"/><path d="M9.5 7V4.8h5V7"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/>',
+    security: '<path d="M12 2.8l7 2.9v5.8c0 4.3-2.9 7.8-7 8.7-4.1-.9-7-4.4-7-8.7V5.7z"/><path d="M9 12l2.2 2.2L15.2 10"/>',
+    piu: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+    cerca: '<circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8L20.5 20.5"/>',
+    chiudi: '<path d="M6 6l12 12M18 6L6 18"/>',
+    backup: '<path d="M12 3.5v11M7.8 10.3L12 14.5l4.2-4.2"/><path d="M4 20.5h16"/>',
+    esci: '<path d="M14.5 12H4M8 8l-4 4 4 4"/><path d="M11 4.5h6.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H11"/>',
+  };
+
+  function icona(nome) {
+    return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[nome] || ''}</svg>`;
+  }
+
+  // Elenco unico delle sezioni: da qui nascono sia il menu laterale del
+  // computer sia la barra in basso e il foglio del telefono, cosi' non possono
+  // piu' andare fuori sincrono.
+  const SECTIONS = [
+    { view: 'dashboard', label: 'Dashboard', tab: true },
+    { view: 'ideas', label: 'Idee', tab: true },
+    { view: 'projects', label: 'Progetti' },
+    { view: 'vault', label: 'Vault', tab: true },
+    { view: 'accounts', label: 'Account' },
+    { view: 'drive', label: 'Drive', tab: true },
+    { view: 'dossiers', label: 'Fascicoli' },
+    { view: 'trash', label: 'Cestino' },
+    { view: 'security', label: 'Sicurezza' },
+  ];
+
   const nav = document.getElementById('nav');
   const viewRoot = document.getElementById('view-root');
+  const tabbar = document.getElementById('tabbar');
+  const sheet = document.getElementById('sheet');
+  const sheetBackdrop = document.getElementById('sheet-backdrop');
 
-  nav.addEventListener('click', (e) => {
-    const btn = e.target.closest('.nav-item');
-    if (!btn) return;
-    render(btn.dataset.view);
+  // Menu laterale (schermo largo)
+  SECTIONS.forEach((s) => {
+    nav.appendChild(el(`
+      <button class="nav-item" data-view="${s.view}">${icona(s.view)}<span>${esc(s.label)}</span></button>
+    `));
+  });
+
+  // Barra in basso (telefono): le sezioni piu' usate piu' "Altro"
+  SECTIONS.filter((s) => s.tab).forEach((s) => {
+    tabbar.appendChild(el(`
+      <button class="tab-item" data-view="${s.view}">${icona(s.view)}<span>${esc(s.label)}</span></button>
+    `));
+  });
+  const tabPiu = el(`<button class="tab-item" id="tab-piu">${icona('piu')}<span>Altro</span></button>`);
+  tabbar.appendChild(tabPiu);
+
+  // Foglio con l'elenco completo, cosi' nessuna sezione resta difficile da trovare
+  function buildSheet() {
+    sheet.innerHTML = '';
+    sheet.appendChild(el('<div class="sheet-handle" aria-hidden="true"></div>'));
+    sheet.appendChild(el('<h3 class="sheet-title">Tutte le sezioni</h3>'));
+    const list = el('<div class="sheet-list"></div>');
+    SECTIONS.forEach((s) => {
+      list.appendChild(el(`
+        <button class="sheet-item" data-view="${s.view}">${icona(s.view)}<span>${esc(s.label)}</span></button>
+      `));
+    });
+    sheet.appendChild(list);
+
+    const azioni = el('<div class="sheet-list sheet-actions"></div>');
+    azioni.appendChild(el(`
+      <a class="sheet-item" href="/api/backup" target="_blank" rel="noopener">${icona('backup')}<span>Esporta backup</span></a>
+    `));
+    const esci = el(`<button class="sheet-item" data-logout>${icona('esci')}<span>Esci</span></button>`);
+    esci.addEventListener('click', logout);
+    azioni.appendChild(esci);
+    sheet.appendChild(azioni);
+  }
+  buildSheet();
+
+  function openSheet() {
+    sheetBackdrop.classList.remove('hidden');
+    document.body.classList.add('no-scroll');
+  }
+  function closeSheet() {
+    sheetBackdrop.classList.add('hidden');
+    document.body.classList.remove('no-scroll');
+  }
+
+  tabPiu.addEventListener('click', openSheet);
+  sheetBackdrop.addEventListener('click', (e) => { if (e.target === sheetBackdrop) closeSheet(); });
+
+  // Un solo gestore per menu laterale, barra in basso e foglio.
+  [nav, tabbar, sheet].forEach((contenitore) => {
+    contenitore.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-view]');
+      if (!btn) return;
+      closeSheet();
+      render(btn.dataset.view);
+    });
   });
 
   function setActiveNav(view) {
-    nav.querySelectorAll('.nav-item').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
+    document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
+    // Se la sezione attiva non e' fra quelle della barra, resta evidenziato "Altro".
+    tabPiu.classList.toggle('active', !SECTIONS.some((s) => s.tab && s.view === view));
   }
 
   const views = {}; // popolate piu' sotto
@@ -1068,7 +1177,25 @@
   // ---------------- Global search ----------------
   const searchInput = document.getElementById('global-search');
   const searchResults = document.getElementById('search-results');
+  const topbar = document.getElementById('topbar');
+  const searchToggle = document.getElementById('search-toggle');
   let searchTimer = null;
+
+  // Su telefono la ricerca sta dietro un'icona: apre a tutta larghezza al tocco
+  // e libera lo spazio che occupava fissa in cima. Su schermo largo l'icona e'
+  // nascosta dal CSS e il campo resta sempre visibile.
+  searchToggle.innerHTML = icona('cerca');
+  searchToggle.addEventListener('click', () => {
+    const aperta = topbar.classList.toggle('search-open');
+    searchToggle.setAttribute('aria-expanded', String(aperta));
+    searchToggle.innerHTML = icona(aperta ? 'chiudi' : 'cerca');
+    if (aperta) {
+      searchInput.focus();
+    } else {
+      searchInput.value = '';
+      searchResults.classList.add('hidden');
+    }
+  });
 
   searchInput.addEventListener('input', () => {
     clearTimeout(searchTimer);

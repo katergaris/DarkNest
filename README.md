@@ -75,6 +75,12 @@ Il conteggio riparte a ogni utilizzo: con `SESSION_DAYS=7`, se apri DarkNest alm
 
 > Con `SESSION_DAYS=0` chiunque usi quel browser entra senza password. Se il computer è condiviso, imposta un numero di giorni oppure ricordati di premere "Esci".
 
+## Dal telefono
+
+L'interfaccia si adatta agli schermi piccoli: al posto del menu laterale compare una **barra in basso** con Dashboard, Idee, Vault e Drive, mentre "Altro" apre un elenco con tutte le sezioni più "Esporta backup" ed "Esci". La ricerca sta dietro l'icona della lente e si apre al tocco.
+
+Puoi anche **aggiungerlo alla schermata home** e usarlo come un'app, senza barra del browser: dal telefono apri l'indirizzo di DarkNest e scegli "Aggiungi a schermata Home" (Safari) o "Installa app" / "Aggiungi a schermata Home" (Chrome). Serve che il telefono raggiunga il server: stessa rete di casa, oppure una VPN.
+
 ## Verifica in due passaggi (Google Authenticator)
 
 Facoltativa, si attiva da **Sicurezza** nel menu laterale. Una volta attiva, per entrare servono la password *e* un codice a 6 cifre generato dal telefono.
@@ -165,6 +171,8 @@ darknest/
 │   ├── session-store.js           # sessioni salvate su SQLite (sopravvivono ai riavvii)
 │   └── routes/                  # API REST per ogni sezione
 └── public/                       # frontend (HTML/CSS/JS, nessuna build richiesta)
+    ├── manifest.webmanifest   # aggiunta alla schermata home del telefono
+    └── icon.svg / icon-*.png   # icone dell'app
 ```
 
 ## Licenza

@@ -183,8 +183,8 @@ input:focus, textarea:focus, select:focus {
 }
 .nav-item:hover { background: var(--surface-2); color: var(--text); }
 .nav-item.active { background: var(--surface-2); color: var(--accent-soft); }
-.nav-dot { font-size: 0.5rem; color: var(--accent-dim); }
-.nav-item.active .nav-dot { color: var(--accent); }
+.nav-item .icon { color: var(--accent-dim); }
+.nav-item.active .icon { color: var(--accent); }
 
 .sidebar-footer { display: flex; flex-direction: column; gap: 8px; padding-top: 16px; border-top: 1px dashed var(--border); }
 
@@ -276,7 +276,8 @@ input:focus, textarea:focus, select:focus {
 .card-title { font-weight: 600; font-size: 1rem; margin: 0; }
 .card-sub { color: var(--text-muted); font-size: 0.82rem; margin: 0; }
 .card-body { font-size: 0.87rem; color: var(--text); opacity: 0.9; white-space: pre-wrap; }
-.card-actions { display: flex; gap: 6px; margin-top: auto; padding-top: 8px; }
+/* I pulsanti vanno a capo invece di far allargare la riga oltre lo schermo. */
+.card-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 8px; }
 
 .tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag {
@@ -403,7 +404,22 @@ input:focus, textarea:focus, select:focus {
   border-bottom: 1px solid var(--border);
 }
 .modal-title { margin: 0; font-family: var(--font-display); font-weight: 600; }
-.modal-close { background: none; border: none; color: var(--text-muted); font-size: 1.1rem; cursor: pointer; }
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  /* Area di tocco generosa: il solo simbolo ✕ era un bersaglio da 22px. */
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: -8px -8px -8px 0;
+}
+.modal-close:hover { color: var(--text); background: var(--surface-2); }
 .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
 .form-row { display: flex; flex-direction: column; gap: 6px; }
 .form-row label { font-size: 0.82rem; color: var(--text-muted); }
@@ -439,12 +455,178 @@ input:focus, textarea:focus, select:focus {
   box-shadow: 0 8px 24px rgba(0,0,0,0.35);
 }
 
+/* ---------- Navigazione da telefono ---------- */
+/* Barra in basso e foglio esistono solo sotto i 760px: su schermo largo
+   restano nascosti e vale il menu laterale di sempre. */
+.tabbar, .sheet-backdrop { display: none; }
+/* Specificita' doppia: senza, la regola display:inline-flex di .icon-btn
+   qui sotto avrebbe mostrato l'icona di ricerca anche su schermo largo. */
+.icon-btn.search-toggle { display: none; }
+
+.icon { width: 20px; height: 20px; flex-shrink: 0; }
+.nav-item .icon { width: 18px; height: 18px; }
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-btn:hover { color: var(--text); background: var(--surface-2); }
+.icon-btn .icon { width: 22px; height: 22px; }
+
+body.no-scroll { overflow: hidden; }
+
 @media (max-width: 760px) {
   .app { flex-direction: column; }
-  .sidebar { width: 100%; height: auto; position: static; flex-direction: row; overflow-x: auto; }
-  .nav { flex-direction: row; }
-  .sidebar-footer { flex-direction: row; }
-  .view-root { padding: 20px 16px 40px; }
+
+  /* Il menu laterale lascia il posto alla barra in basso: prima diventava una
+     striscia orizzontale in cui si vedevano 1 o 2 voci su 9. */
+  .sidebar { display: none; }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 8px 12px;
+    min-height: 52px;
+  }
+  .icon-btn.search-toggle { display: inline-flex; }
+  .topbar .search-wrap { display: none; max-width: none; }
+  .topbar.search-open .search-wrap { display: block; flex: 1; }
+  .topbar.search-open .search-toggle { margin-left: 8px; order: 2; }
+
+  /* Spazio in fondo per non finire sotto la barra fissa */
+  .view-root {
+    padding: 20px 16px calc(84px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .tabbar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .tab-item {
+    flex: 1;
+    min-width: 0;
+    /* 48px: la misura minima comoda da toccare con il pollice */
+    min-height: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    padding: 4px 2px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .tab-item span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tab-item.active { color: var(--accent-soft); background: var(--surface-2); }
+  .tab-item.active .icon { color: var(--accent); }
+
+  .sheet-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(0,0,0,0.55);
+  }
+  .sheet-backdrop.hidden { display: none; }
+
+  .sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 85vh;
+    overflow-y: auto;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 18px 18px 0 0;
+    padding: 10px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  .sheet-handle {
+    width: 42px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--border);
+    margin: 4px auto 12px;
+  }
+  .sheet-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 12px;
+  }
+  .sheet-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .sheet-actions {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+  }
+  .sheet-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 10px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 0.87rem;
+    font-family: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .sheet-item.active { color: var(--accent-soft); border-color: var(--accent-dim); }
+  .sheet-item .icon { color: var(--text-muted); }
+  .sheet-item.active .icon { color: var(--accent); }
+
+  /* Righe di Vault, Drive, Cestino e Fascicoli: i figli di grid e flex hanno
+     larghezza minima pari al contenuto, quindi un indirizzo o un nome di file
+     lunghi allargavano la riga oltre il bordo dello schermo. */
+  .vault-row > *, .doc-row > *, .trash-row > * { min-width: 0; }
+  .doc-row, .trash-row { flex-wrap: wrap; }
+  .vault-row strong, .vault-row span,
+  .doc-name, .doc-meta,
+  .trash-row span, .dossier-chip { overflow-wrap: anywhere; }
+
+  /* Pulsanti comodi da toccare col pollice: sul computer restano compatti. */
+  .btn { min-height: 44px; }
+  .btn-sm { min-height: 40px; padding: 8px 12px; }
+  .icon-btn { min-width: 44px; min-height: 44px; }
+  input, textarea, select { font-size: 16px; } /* evita lo zoom automatico su iOS */
+
+  /* Titoli e azioni delle viste su una colonna, senza stringere i pulsanti */
+  .view-header { margin-bottom: 16px; }
+  .view-header h2 { font-size: 1.4rem; }
+  .view-header-actions { width: 100%; }
+  .view-header-actions .btn { flex: 1; }
+
+  .modal { max-height: 88vh; }
 }
 
 /* --- Sicurezza / verifica in due passaggi --- */
