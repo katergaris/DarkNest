@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>DarkNest</title>
-<meta name="theme-color" content="#1B1712" />
+<meta name="theme-color" content="#101219" />
 <meta name="description" content="Il tuo spazio personale: idee, progetti, password, documenti." />
 <!-- Aggiunta alla schermata home del telefono -->
 <link rel="manifest" href="/manifest.webmanifest" />
@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="/icon-192.png" />
 <link rel="icon" href="/icon.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -59,19 +59,24 @@
 <div id="app" class="app hidden">
   <aside class="sidebar">
     <div class="sidebar-brand">
-      <svg viewBox="0 0 64 64" width="30" height="30" class="brand-mark">
-        <path d="M8 40 C8 24, 20 14, 32 14 C44 14, 56 24, 56 40" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>
-        <path d="M18 45 C18 32, 24 24, 32 24 C40 24, 46 32, 46 45" fill="none" stroke="var(--accent-soft)" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="32" cy="40" r="4" fill="var(--accent)"/>
-      </svg>
-      <span>DarkNest</span>
+      <span class="brand-mark-box" aria-hidden="true">~</span>
+      <span class="brand-name">darknest</span>
+      <span class="brand-host" id="brand-host"></span>
     </div>
 
-    <!-- Le voci vengono generate da app.js a partire da un unico elenco,
-         condiviso con la barra in basso del telefono. -->
-    <nav class="nav" id="nav"></nav>
+    <div class="sidebar-scroll">
+      <div class="nav-label">viste</div>
+      <!-- Le voci vengono generate da app.js a partire da un unico elenco,
+           condiviso con la barra in basso del telefono. -->
+      <nav class="nav" id="nav"></nav>
+
+      <div class="nav-label">fascicoli</div>
+      <!-- Popolato da app.js con i fascicoli reali e il numero di elementi collegati. -->
+      <div class="tree" id="fascicoli-tree"></div>
+    </div>
 
     <div class="sidebar-footer">
+      <div class="sidebar-status"><span class="status-dot">●</span>locale · aes-256-gcm</div>
       <a class="btn btn-ghost btn-block" href="/api/backup" target="_blank" rel="noopener">Esporta backup</a>
       <button class="btn btn-ghost btn-block" id="logout-btn">Esci</button>
     </div>
@@ -79,11 +84,14 @@
 
   <main class="main">
     <header class="topbar" id="topbar">
+      <div class="breadcrumb" id="breadcrumb">~</div>
       <!-- Su telefono la ricerca parte come icona e si apre al tocco: a schermo
            pieno resta sempre visibile come prima. -->
       <button class="icon-btn search-toggle" id="search-toggle" aria-label="Cerca" aria-expanded="false"></button>
       <div class="search-wrap">
-        <input type="text" id="global-search" placeholder="Cerca in tutto DarkNest…" autocomplete="off" />
+        <span class="search-prefix" aria-hidden="true">/</span>
+        <input type="text" id="global-search" placeholder="cerca o comanda…" autocomplete="off" />
+        <span class="kb search-kb" aria-hidden="true">⌘K</span>
         <div id="search-results" class="search-results hidden"></div>
       </div>
     </header>
@@ -91,6 +99,8 @@
     <section id="view-root" class="view-root">
       <!-- le view vengono renderizzate qui via JS -->
     </section>
+
+    <footer class="statusbar" id="statusbar"></footer>
   </main>
 
   <!-- Navigazione da telefono: barra fissa in basso + foglio con tutto il resto -->

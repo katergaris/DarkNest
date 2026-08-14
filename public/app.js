@@ -230,6 +230,16 @@
   const tabbar = document.getElementById('tabbar');
   const sheet = document.getElementById('sheet');
   const sheetBackdrop = document.getElementById('sheet-backdrop');
+  const breadcrumbEl = document.getElementById('breadcrumb');
+  const fascicoliTree = document.getElementById('fascicoli-tree');
+  const statusbar = document.getElementById('statusbar');
+  const brandHost = document.getElementById('brand-host');
+  if (brandHost) brandHost.textContent = location.host;
+
+  const BREADCRUMB_PATH = {
+    dashboard: 'dashboard', ideas: 'idee', projects: 'progetti', vault: 'vault',
+    accounts: 'account', drive: 'drive', dossiers: 'fascicoli', trash: 'cestino', security: 'sicurezza',
+  };
 
   // Menu laterale (schermo largo)
   SECTIONS.forEach((s) => {
@@ -283,13 +293,13 @@
   tabPiu.addEventListener('click', openSheet);
   sheetBackdrop.addEventListener('click', (e) => { if (e.target === sheetBackdrop) closeSheet(); });
 
-  // Un solo gestore per menu laterale, barra in basso e foglio.
-  [nav, tabbar, sheet].forEach((contenitore) => {
+  // Un solo gestore per menu laterale, barra in basso, foglio e albero fascicoli.
+  [nav, tabbar, sheet, fascicoliTree].forEach((contenitore) => {
     contenitore.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-view]');
       if (!btn) return;
       closeSheet();
-      render(btn.dataset.view);
+      render(btn.dataset.view, btn.dataset.dossier ? { highlight: btn.dataset.dossier } : {});
     });
   });
 
@@ -297,6 +307,7 @@
     document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
     // Se la sezione attiva non e' fra quelle della barra, resta evidenziato "Altro".
     tabPiu.classList.toggle('active', !SECTIONS.some((s) => s.tab && s.view === view));
+    if (breadcrumbEl) breadcrumbEl.textContent = `~ / ${BREADCRUMB_PATH[view] || view}`;
   }
 
   const views = {}; // popolate piu' sotto
@@ -311,6 +322,63 @@
     } catch (err) {
       viewRoot.innerHTML = '';
       viewRoot.appendChild(el(`<div class="empty-state">Errore: ${esc(err.message)}</div>`));
+    }
+    refreshShellData();
+  }
+
+  // ---------------- Contatori nel menu, albero fascicoli, barra di stato ----------------
+  // Chiamata ad ogni render(): dato lo scopo personale dell'app i volumi sono
+  // piccoli, quindi qualche chiamata in piu' per tenere la barra laterale
+  // aggiornata dopo ogni creazione/eliminazione e' un compromesso ragionevole.
+  async function refreshShellData() {
+    let ideas, projects, vault, accounts, docs, dossiers, trash, reminders;
+    try {
+      [ideas, projects, vault, accounts, docs, dossiers, trash, reminders] = await Promise.all([
+        api('/ideas'), api('/projects'), api('/vault'), api('/accounts'), api('/drive'),
+        api('/dossiers'), api('/trash'), api('/search/reminders/upcoming?days=30'),
+      ]);
+    } catch (err) {
+      return; // chrome non critico: se fallisce lasciamo lo stato precedente
+    }
+
+    const counts = {
+      ideas: ideas.length, projects: projects.length, vault: vault.length,
+      accounts: accounts.length, drive: docs.length, dossiers: dossiers.length, trash: trash.length,
+    };
+    document.querySelectorAll('.nav-item[data-view]').forEach((btn) => {
+      const c = counts[btn.dataset.view];
+      let badge = btn.querySelector('.nav-count');
+      if (c === undefined) { if (badge) badge.remove(); return; }
+      if (!badge) { badge = el('<span class="nav-count"></span>'); btn.appendChild(badge); }
+      badge.textContent = c;
+    });
+
+    if (fascicoliTree) {
+      fascicoliTree.innerHTML = '';
+      if (!dossiers.length) {
+        fascicoliTree.appendChild(el('<div class="tree-empty">nessun fascicolo</div>'));
+      } else {
+        dossiers.forEach((d) => {
+          fascicoliTree.appendChild(el(`
+            <button class="tree-item" data-view="dossiers" data-dossier="${d.id}">
+              <span class="tree-bullet">◆</span><span class="tree-label">${esc(d.title)}</span><span class="tree-count">${d.items.length}</span>
+            </button>
+          `));
+        });
+      }
+    }
+
+    if (statusbar) {
+      const total = counts.ideas + counts.projects + counts.vault + counts.accounts + counts.drive + counts.dossiers;
+      statusbar.innerHTML = '';
+      statusbar.appendChild(el(`
+        <span class="status-dot">●</span>
+        <span>tutto in locale</span>
+        <span>${total} voci</span>
+        <span>${reminders.length} scaden${reminders.length === 1 ? 'za' : 'ze'} &lt; 30gg</span>
+        <span class="status-spacer"></span>
+        <span class="kb">⌘K</span><span>cerca</span>
+      `));
     }
   }
 
@@ -877,8 +945,9 @@
   // ==================================================================
   // FASCICOLI
   // ==================================================================
-  views.dossiers = async (root) => {
+  views.dossiers = async (root, opts = {}) => {
     const dossiers = await api('/dossiers');
+    const highlightId = opts.highlight ? String(opts.highlight) : null;
     root.innerHTML = '';
     root.appendChild(el(`
       <div class="view-header">
@@ -944,9 +1013,14 @@
         await api(`/dossiers/${d.id}`, { method: 'DELETE' });
         toast('Fascicolo eliminato'); render('dossiers');
       });
+      if (highlightId && String(d.id) === highlightId) card.classList.add('card-highlight');
       grid.appendChild(card);
     });
     root.appendChild(grid);
+    if (highlightId) {
+      const target = grid.querySelector('.card-highlight');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   };
 
   // ==================================================================
@@ -1234,6 +1308,14 @@
 
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.search-wrap')) searchResults.classList.add('hidden');
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'k') return;
+    if (appRoot.classList.contains('hidden')) return; // non ancora autenticati
+    e.preventDefault();
+    if (!topbar.classList.contains('search-open') && searchToggle.offsetParent) searchToggle.click();
+    else searchInput.focus();
   });
 
   // Molti handler fanno "await api(...)" senza try/catch: senza questa rete di
