@@ -24,12 +24,7 @@
 <div id="auth-screen" class="auth-screen hidden">
   <div class="auth-card">
     <div class="nest-mark" aria-hidden="true">
-      <svg viewBox="0 0 64 64" width="48" height="48">
-        <path d="M8 40 C8 24, 20 14, 32 14 C44 14, 56 24, 56 40" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/>
-        <path d="M14 44 C14 30, 22 20, 32 20 C42 20, 50 30, 50 44" fill="none" stroke="var(--accent-soft)" stroke-width="3" stroke-linecap="round"/>
-        <path d="M20 47 C20 36, 25 27, 32 27 C39 27, 44 36, 44 47" fill="none" stroke="var(--text-muted)" stroke-width="3" stroke-linecap="round"/>
-        <circle cx="32" cy="41" r="4.5" fill="var(--accent)"/>
-      </svg>
+      <img src="/icon.svg" width="72" height="72" alt="" />
     </div>
     <h1>DarkNest</h1>
     <p class="auth-sub" id="auth-sub">Il tuo spazio personale, al sicuro.</p>
@@ -59,24 +54,18 @@
 <div id="app" class="app hidden">
   <aside class="sidebar">
     <div class="sidebar-brand">
-      <span class="brand-mark-box" aria-hidden="true">~</span>
-      <span class="brand-name">darknest</span>
-      <span class="brand-host" id="brand-host"></span>
+      <span class="brand-mark-box" aria-hidden="true"></span>
+      <span class="brand-name">DarkNest</span>
     </div>
 
     <div class="sidebar-scroll">
-      <div class="nav-label">viste</div>
       <!-- Le voci vengono generate da app.js a partire da un unico elenco,
            condiviso con la barra in basso del telefono. -->
       <nav class="nav" id="nav"></nav>
-
-      <div class="nav-label">fascicoli</div>
-      <!-- Popolato da app.js con i fascicoli reali e il numero di elementi collegati. -->
-      <div class="tree" id="fascicoli-tree"></div>
     </div>
 
     <div class="sidebar-footer">
-      <div class="sidebar-status"><span class="status-dot">●</span>locale · aes-256-gcm</div>
+      <div class="sidebar-status">tutto in locale<br /><span id="sidebar-backup-note">aes-256-gcm</span></div>
       <a class="btn btn-ghost btn-block" href="/api/backup" target="_blank" rel="noopener">Esporta backup</a>
       <button class="btn btn-ghost btn-block" id="logout-btn">Esci</button>
     </div>
@@ -84,14 +73,11 @@
 
   <main class="main">
     <header class="topbar" id="topbar">
-      <div class="breadcrumb" id="breadcrumb">~</div>
       <!-- Su telefono la ricerca parte come icona e si apre al tocco: a schermo
            pieno resta sempre visibile come prima. -->
       <button class="icon-btn search-toggle" id="search-toggle" aria-label="Cerca" aria-expanded="false"></button>
       <div class="search-wrap">
-        <span class="search-prefix" aria-hidden="true">/</span>
-        <input type="text" id="global-search" placeholder="cerca o comanda…" autocomplete="off" />
-        <span class="kb search-kb" aria-hidden="true">⌘K</span>
+        <input type="text" id="global-search" placeholder="Cerca in tutto DarkNest…" autocomplete="off" />
         <div id="search-results" class="search-results hidden"></div>
       </div>
     </header>
@@ -99,8 +85,6 @@
     <section id="view-root" class="view-root">
       <!-- le view vengono renderizzate qui via JS -->
     </section>
-
-    <footer class="statusbar" id="statusbar"></footer>
   </main>
 
   <!-- Navigazione da telefono: barra fissa in basso + foglio con tutto il resto -->

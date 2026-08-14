@@ -183,12 +183,13 @@
   function startApp() {
     authScreen.classList.add('hidden');
     appRoot.classList.remove('hidden');
-    render('dashboard');
+    render('flusso');
   }
 
   // ---------------- Navigation ----------------
   // Icone di linea, disegnate qui per non dipendere da file o servizi esterni.
   const ICONS = {
+    flusso: '<path d="M3 12h4l2.5-7L13 19l2.5-7H21"/>',
     dashboard: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     ideas: '<path d="M9.5 18.5h5M10.5 21.5h3"/><path d="M12 2.5a6 6 0 0 0-3.4 10.9c.5.4.9 1 .9 1.7v.4h5v-.4c0-.7.4-1.3.9-1.7A6 6 0 0 0 12 2.5z"/>',
     projects: '<path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6l1.3 1.3L7.3 4.8"/><path d="M3.5 12l1.3 1.3L7.3 10.8"/><path d="M3.5 18l1.3 1.3L7.3 16.8"/>',
@@ -214,7 +215,8 @@
   // computer sia la barra in basso e il foglio del telefono, cosi' non possono
   // piu' andare fuori sincrono.
   const SECTIONS = [
-    { view: 'dashboard', label: 'Dashboard', tab: true },
+    { view: 'flusso', label: 'Flusso', tab: true },
+    { view: 'dashboard', label: 'Dashboard' },
     { view: 'ideas', label: 'Idee', tab: true },
     { view: 'projects', label: 'Progetti' },
     { view: 'vault', label: 'Vault', tab: true },
@@ -230,16 +232,6 @@
   const tabbar = document.getElementById('tabbar');
   const sheet = document.getElementById('sheet');
   const sheetBackdrop = document.getElementById('sheet-backdrop');
-  const breadcrumbEl = document.getElementById('breadcrumb');
-  const fascicoliTree = document.getElementById('fascicoli-tree');
-  const statusbar = document.getElementById('statusbar');
-  const brandHost = document.getElementById('brand-host');
-  if (brandHost) brandHost.textContent = location.host;
-
-  const BREADCRUMB_PATH = {
-    dashboard: 'dashboard', ideas: 'idee', projects: 'progetti', vault: 'vault',
-    accounts: 'account', drive: 'drive', dossiers: 'fascicoli', trash: 'cestino', security: 'sicurezza',
-  };
 
   // Menu laterale (schermo largo)
   SECTIONS.forEach((s) => {
@@ -293,13 +285,13 @@
   tabPiu.addEventListener('click', openSheet);
   sheetBackdrop.addEventListener('click', (e) => { if (e.target === sheetBackdrop) closeSheet(); });
 
-  // Un solo gestore per menu laterale, barra in basso, foglio e albero fascicoli.
-  [nav, tabbar, sheet, fascicoliTree].forEach((contenitore) => {
+  // Un solo gestore per menu laterale, barra in basso e foglio.
+  [nav, tabbar, sheet].forEach((contenitore) => {
     contenitore.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-view]');
       if (!btn) return;
       closeSheet();
-      render(btn.dataset.view, btn.dataset.dossier ? { highlight: btn.dataset.dossier } : {});
+      render(btn.dataset.view);
     });
   });
 
@@ -307,7 +299,6 @@
     document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
     // Se la sezione attiva non e' fra quelle della barra, resta evidenziato "Altro".
     tabPiu.classList.toggle('active', !SECTIONS.some((s) => s.tab && s.view === view));
-    if (breadcrumbEl) breadcrumbEl.textContent = `~ / ${BREADCRUMB_PATH[view] || view}`;
   }
 
   const views = {}; // popolate piu' sotto
@@ -323,24 +314,23 @@
       viewRoot.innerHTML = '';
       viewRoot.appendChild(el(`<div class="empty-state">Errore: ${esc(err.message)}</div>`));
     }
-    refreshShellData();
+    refreshNavCounts();
   }
 
-  // ---------------- Contatori nel menu, albero fascicoli, barra di stato ----------------
+  // ---------------- Contatori nel menu laterale ----------------
   // Chiamata ad ogni render(): dato lo scopo personale dell'app i volumi sono
-  // piccoli, quindi qualche chiamata in piu' per tenere la barra laterale
-  // aggiornata dopo ogni creazione/eliminazione e' un compromesso ragionevole.
-  async function refreshShellData() {
-    let ideas, projects, vault, accounts, docs, dossiers, trash, reminders;
+  // piccoli, quindi qualche chiamata in piu' per tenere i numeri aggiornati
+  // dopo ogni creazione/eliminazione e' un compromesso ragionevole.
+  async function refreshNavCounts() {
+    let ideas, projects, vault, accounts, docs, dossiers, trash;
     try {
-      [ideas, projects, vault, accounts, docs, dossiers, trash, reminders] = await Promise.all([
+      [ideas, projects, vault, accounts, docs, dossiers, trash] = await Promise.all([
         api('/ideas'), api('/projects'), api('/vault'), api('/accounts'), api('/drive'),
-        api('/dossiers'), api('/trash'), api('/search/reminders/upcoming?days=30'),
+        api('/dossiers'), api('/trash'),
       ]);
     } catch (err) {
       return; // chrome non critico: se fallisce lasciamo lo stato precedente
     }
-
     const counts = {
       ideas: ideas.length, projects: projects.length, vault: vault.length,
       accounts: accounts.length, drive: docs.length, dossiers: dossiers.length, trash: trash.length,
@@ -352,34 +342,6 @@
       if (!badge) { badge = el('<span class="nav-count"></span>'); btn.appendChild(badge); }
       badge.textContent = c;
     });
-
-    if (fascicoliTree) {
-      fascicoliTree.innerHTML = '';
-      if (!dossiers.length) {
-        fascicoliTree.appendChild(el('<div class="tree-empty">nessun fascicolo</div>'));
-      } else {
-        dossiers.forEach((d) => {
-          fascicoliTree.appendChild(el(`
-            <button class="tree-item" data-view="dossiers" data-dossier="${d.id}">
-              <span class="tree-bullet">◆</span><span class="tree-label">${esc(d.title)}</span><span class="tree-count">${d.items.length}</span>
-            </button>
-          `));
-        });
-      }
-    }
-
-    if (statusbar) {
-      const total = counts.ideas + counts.projects + counts.vault + counts.accounts + counts.drive + counts.dossiers;
-      statusbar.innerHTML = '';
-      statusbar.appendChild(el(`
-        <span class="status-dot">●</span>
-        <span>tutto in locale</span>
-        <span>${total} voci</span>
-        <span>${reminders.length} scaden${reminders.length === 1 ? 'za' : 'ze'} &lt; 30gg</span>
-        <span class="status-spacer"></span>
-        <span class="kb">⌘K</span><span>cerca</span>
-      `));
-    }
   }
 
   // ---------------- Collegamento a fascicolo (riutilizzabile) ----------------
@@ -409,6 +371,277 @@
     }
     openModal('Collega a un fascicolo', wrap);
   }
+
+  // ==================================================================
+  // FLUSSO (composer + feed unico, con scadenze/fascicoli/statistiche a lato)
+  // ==================================================================
+  function dayLabel(dateStr) {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const startOf = (dt) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+    const diffDays = Math.round((startOf(now) - startOf(d)) / 86400000);
+    const giorni = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+    if (diffDays === 0) return `OGGI · ${giorni[d.getDay()].toUpperCase()} ${d.getDate()}`;
+    if (diffDays === 1) return 'IERI';
+    return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }).toUpperCase();
+  }
+
+  function fmtTime(dateStr) {
+    try { return new Date(dateStr).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return ''; }
+  }
+
+  const FLUSSO_API_TYPE = { idea: 'idea', progetto: 'project', account: 'account', documento: 'document' };
+
+  function renderEntryCard(item, linkIndex) {
+    const apiType = FLUSSO_API_TYPE[item.kind];
+    const links = linkIndex.get(`${apiType}:${item.id}`) || [];
+    const tagClass = { idea: 'tag-accent', progetto: 'tag-accent', documento: 'tag-outline', account: 'tag-neutral' }[item.kind];
+
+    const card = el('<div class="entry-card"></div>');
+    const body = el('<div class="entry-card-body"></div>');
+    body.appendChild(el(`
+      <div class="entry-meta">
+        <span class="tag ${tagClass}">${item.kind}</span>
+        <span class="entry-time">${fmtTime(item.created_at)}</span>
+        ${links[0] ? `<span class="entry-fascicolo">◆ ${esc(links[0].title)}</span>` : ''}
+      </div>
+    `));
+
+    if (item.kind === 'idea') {
+      body.appendChild(el(`<div class="entry-text">${escTrim(item.body || item.title, 260)}</div>`));
+      if ((item.tags || []).length) {
+        body.appendChild(el(`<div class="tag-row" style="margin-top:9px">${item.tags.map((t) => `<span class="tag tag-neutral">${esc(t)}</span>`).join('')}</div>`));
+      }
+    } else if (item.kind === 'documento') {
+      body.appendChild(el(`<div class="entry-text">Caricato: ${escTrim(item.original_name, 160)}</div>`));
+      const ext = (item.original_name.includes('.') ? item.original_name.split('.').pop() : '').toUpperCase().slice(0, 4);
+      body.appendChild(el(`
+        <div class="entry-doc">
+          <span class="entry-doc-ext">${esc(ext || 'FILE')}</span>
+          <div style="flex:1;min-width:0">
+            <div class="entry-doc-name">${esc(item.original_name)}</div>
+            <div class="entry-doc-meta">${fmtSize(item.size)}${item.folder ? ' · ' + esc(item.folder) : ''}</div>
+          </div>
+        </div>
+      `));
+    } else if (item.kind === 'progetto') {
+      body.appendChild(el(`<div class="entry-text">${esc(item.title)}</div>`));
+      const total = (item.checklist || []).length;
+      const done = (item.checklist || []).filter((c) => c.done).length;
+      if (total) {
+        const pct = Math.round((done / total) * 100);
+        body.appendChild(el(`
+          <div class="entry-progress">
+            <div class="entry-progress-track"><div class="entry-progress-fill" style="width:${pct}%"></div></div>
+            <span class="entry-progress-label">${done}/${total}</span>
+          </div>
+        `));
+      } else {
+        body.appendChild(el(`<span class="status-pill status-${item.status}" style="margin-top:6px">${item.status.replace('_', ' ')}</span>`));
+      }
+    } else if (item.kind === 'account') {
+      body.appendChild(el(`<div class="entry-text">${esc(item.service)}${item.renewal_date ? ' — rinnovo ' + fmtDate(item.renewal_date) : ''}</div>`));
+    }
+    card.appendChild(body);
+
+    const actions = el('<div class="entry-actions"></div>');
+    const collega = el('<button type="button">Collega</button>');
+    collega.addEventListener('click', () => openLinkToDossierModal(apiType, item.id, item.title || item.service || item.original_name));
+    actions.appendChild(collega);
+
+    const modifica = el('<button type="button">Modifica</button>');
+    modifica.addEventListener('click', () => {
+      if (item.kind === 'idea') {
+        const form = ideaModal(item);
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const tags = form.tags.value.split(',').map((t) => t.trim()).filter(Boolean);
+          await api(`/ideas/${item.id}`, { method: 'PUT', body: JSON.stringify({ title: form.title.value, body: form.body.value, tags }) });
+          closeModal(); toast('Idea aggiornata'); render('flusso');
+        });
+        form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+        openModal('Modifica idea', form);
+      } else {
+        // account/progetto/documento: la modifica completa vive gia' nella loro sezione.
+        render({ progetto: 'projects', account: 'accounts', documento: 'drive' }[item.kind]);
+      }
+    });
+    actions.appendChild(modifica);
+
+    if (links.length) {
+      actions.appendChild(el(`<span class="entry-actions-meta">${links.length} collegament${links.length === 1 ? 'o' : 'i'}</span>`));
+    } else if (item.kind === 'documento') {
+      actions.appendChild(el(`<a href="/api/drive/${item.id}/download" class="entry-actions-meta" style="text-decoration:none">apri</a>`));
+    }
+    card.appendChild(actions);
+    return card;
+  }
+
+  views.flusso = async (root) => {
+    const [ideas, projects, accounts, documents, dossiers, reminders] = await Promise.all([
+      api('/ideas'), api('/projects'), api('/accounts'), api('/drive'),
+      api('/dossiers'), api('/search/reminders/upcoming?days=45'),
+    ]);
+
+    // Mappa elemento -> fascicoli a cui e' collegato: alimenta sia il chip
+    // "◆ nome" sotto ogni voce del flusso sia le statistiche a lato.
+    const linkIndex = new Map();
+    dossiers.forEach((d) => {
+      d.items.forEach((item) => {
+        const key = `${item.type}:${item.id}`;
+        if (!linkIndex.has(key)) linkIndex.set(key, []);
+        linkIndex.get(key).push({ id: d.id, title: d.title });
+      });
+    });
+
+    const entries = [
+      ...ideas.map((x) => ({ kind: 'idea', ...x })),
+      ...projects.map((x) => ({ kind: 'progetto', ...x })),
+      ...accounts.map((x) => ({ kind: 'account', ...x })),
+      ...documents.map((x) => ({ kind: 'documento', ...x })),
+    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 60);
+
+    root.innerHTML = '';
+    root.appendChild(el('<div class="view-header"><h2>Flusso</h2></div>'));
+
+    const layout = el('<div class="flusso-layout"></div>');
+    const main = el('<div></div>');
+    const rail = el('<aside class="right-rail"></aside>');
+
+    // ---- composer ----
+    let selectedDossier = null;
+    const composer = el(`
+      <div class="composer">
+        <textarea id="flusso-text" placeholder="A cosa stai pensando?" rows="2"></textarea>
+        <div class="composer-row">
+          <button type="button" class="chip" data-chip="documento">+ documento</button>
+          <button type="button" class="chip" data-chip="account">+ account</button>
+          <button type="button" class="chip" data-chip="scadenza" title="In arrivo">+ scadenza</button>
+          <button type="button" class="chip chip-fascicolo" data-chip="fascicolo">+ fascicolo</button>
+          <button type="button" class="btn btn-primary" id="flusso-save">Salva</button>
+        </div>
+        <div class="composer-hint">
+          <span><span class="kb">⌘ ⏎</span> salva</span>
+          <span>collega un fascicolo per tenerlo insieme al resto</span>
+        </div>
+      </div>
+    `);
+    const textarea = composer.querySelector('#flusso-text');
+    const fascicoloChip = composer.querySelector('[data-chip="fascicolo"]');
+
+    composer.querySelector('[data-chip="documento"]').addEventListener('click', async () => {
+      await render('drive');
+      const btn = document.getElementById('new-doc');
+      if (btn) btn.click();
+    });
+    composer.querySelector('[data-chip="account"]').addEventListener('click', async () => {
+      await render('accounts');
+      const btn = document.getElementById('new-account');
+      if (btn) btn.click();
+    });
+    fascicoloChip.addEventListener('click', () => {
+      const wrap = el('<div></div>');
+      if (!dossiers.length) {
+        wrap.appendChild(el('<p class="card-sub">Non hai ancora nessun fascicolo. Creane uno dalla sezione Fascicoli.</p>'));
+      } else {
+        dossiers.forEach((d) => {
+          const row = el(`<div class="trash-row"><span>${esc(d.title)}</span><button class="btn btn-sm btn-primary">Scegli</button></div>`);
+          row.querySelector('button').addEventListener('click', () => {
+            selectedDossier = d;
+            fascicoloChip.textContent = `◆ ${d.title}`;
+            closeModal();
+          });
+          wrap.appendChild(row);
+        });
+      }
+      openModal('Collega a un fascicolo', wrap);
+    });
+
+    async function saveEntry() {
+      const text = textarea.value.trim();
+      if (!text) return;
+      const title = text.length > 80 ? text.slice(0, 80) + '…' : text;
+      const idea = await api('/ideas', { method: 'POST', body: JSON.stringify({ title, body: text, tags: [] }) });
+      if (selectedDossier) {
+        await api(`/dossiers/${selectedDossier.id}/links`, { method: 'POST', body: JSON.stringify({ item_type: 'idea', item_id: idea.id }) });
+      }
+      toast('Aggiunto al flusso');
+      render('flusso');
+    }
+    composer.querySelector('#flusso-save').addEventListener('click', saveEntry);
+    textarea.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); saveEntry(); }
+    });
+    main.appendChild(composer);
+
+    // ---- feed ----
+    if (!entries.length) {
+      main.appendChild(el('<div class="empty-state">Il flusso e\' vuoto: scrivi qualcosa qui sopra.</div>'));
+    } else {
+      let lastLabel = null;
+      entries.forEach((item) => {
+        const label = dayLabel(item.created_at);
+        if (label !== lastLabel) {
+          main.appendChild(el(`<div class="day-label">${esc(label)}</div>`));
+          lastLabel = label;
+        }
+        main.appendChild(renderEntryCard(item, linkIndex));
+      });
+    }
+    layout.appendChild(main);
+
+    // ---- right rail ----
+    const deadlinesBlock = el('<div class="rail-block"><h6>Scadenze</h6></div>');
+    if (!reminders.length) {
+      deadlinesBlock.appendChild(el('<p class="card-sub">Nessuna scadenza nei prossimi 45 giorni.</p>'));
+    } else {
+      reminders.slice(0, 6).forEach((r) => {
+        const days = Math.round((new Date(r.date) - new Date()) / 86400000);
+        const cls = days < 0 ? 'overdue' : days <= 7 ? 'soon' : '';
+        deadlinesBlock.appendChild(el(`
+          <div class="rail-deadline">
+            <span class="rail-deadline-days ${cls}">${days < 0 ? days : '+' + days}</span>
+            <span>${esc(r.label)}</span>
+          </div>
+        `));
+      });
+    }
+    rail.appendChild(deadlinesBlock);
+
+    const dossiersBlock = el('<div class="rail-block"><h6>Fascicoli attivi</h6></div>');
+    if (!dossiers.length) {
+      dossiersBlock.appendChild(el('<p class="card-sub">Nessun fascicolo ancora.</p>'));
+    } else {
+      [...dossiers].sort((a, b) => b.items.length - a.items.length).slice(0, 6).forEach((d, i) => {
+        const row = el(`
+          <button type="button" class="rail-dossier ${i === 0 ? 'top' : ''}">
+            <span class="rail-dossier-dot">◆</span><span class="rail-dossier-label">${esc(d.title)}</span><span class="rail-dossier-count">${d.items.length}</span>
+          </button>
+        `);
+        row.addEventListener('click', () => render('dossiers', { highlight: d.id }));
+        dossiersBlock.appendChild(row);
+      });
+    }
+    rail.appendChild(dossiersBlock);
+
+    const weekBlock = el('<div class="rail-block"><h6>Questa settimana</h6></div>');
+    const weekAgo = Date.now() - 7 * 86400000;
+    const recent = entries.filter((x) => new Date(x.created_at).getTime() >= weekAgo);
+    const unlinked = entries.filter((x) => !linkIndex.has(`${FLUSSO_API_TYPE[x.kind]}:${x.id}`)).length;
+    weekBlock.appendChild(el(`
+      <div class="rail-stats">
+        <div>${recent.filter((x) => x.kind === 'idea').length} note · ${recent.filter((x) => x.kind === 'documento').length} documenti</div>
+        <div>${recent.filter((x) => x.kind === 'progetto').length} progetti mossi</div>
+        <div>${unlinked} voci senza fascicolo</div>
+      </div>
+    `));
+    rail.appendChild(weekBlock);
+
+    layout.appendChild(rail);
+    root.appendChild(layout);
+    textarea.focus();
+  };
 
   // ==================================================================
   // DASHBOARD
