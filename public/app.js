@@ -187,28 +187,38 @@
   }
 
   // ---------------- Navigation ----------------
-  // Icone di linea, disegnate qui per non dipendere da file o servizi esterni.
+  // Icone pixel-art (griglia 8x8, stile retro a 8 bit): ogni stringa e' una
+  // riga, '#' un pixel acceso. Niente file o servizi esterni: solo <rect>
+  // generati da questa mappa, un pittogramma con un significato per voce
+  // invece di un tratto astratto.
   const ICONS = {
-    flusso: '<path d="M3 12h4l2.5-7L13 19l2.5-7H21"/>',
-    dashboard: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
-    ideas: '<path d="M9.5 18.5h5M10.5 21.5h3"/><path d="M12 2.5a6 6 0 0 0-3.4 10.9c.5.4.9 1 .9 1.7v.4h5v-.4c0-.7.4-1.3.9-1.7A6 6 0 0 0 12 2.5z"/>',
-    projects: '<path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6l1.3 1.3L7.3 4.8"/><path d="M3.5 12l1.3 1.3L7.3 10.8"/><path d="M3.5 18l1.3 1.3L7.3 16.8"/>',
-    vault: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/>',
-    accounts: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20.5c0-3.4 3.1-5.6 7-5.6s7 2.2 7 5.6"/>',
-    drive: '<path d="M3 7.5a2 2 0 0 1 2-2h3.8l2 2.5H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
-    dossiers: '<path d="M12 3l8.5 4.3L12 11.6 3.5 7.3z"/><path d="M3.5 12L12 16.3 20.5 12"/><path d="M3.5 16.5L12 20.8l8.5-4.3"/>',
-    trash: '<path d="M4 7h16"/><path d="M9.5 7V4.8h5V7"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/>',
-    security: '<path d="M12 2.8l7 2.9v5.8c0 4.3-2.9 7.8-7 8.7-4.1-.9-7-4.4-7-8.7V5.7z"/><path d="M9 12l2.2 2.2L15.2 10"/>',
-    piu: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
-    cerca: '<circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8L20.5 20.5"/>',
-    chiudi: '<path d="M6 6l12 12M18 6L6 18"/>',
-    backup: '<path d="M12 3.5v11M7.8 10.3L12 14.5l4.2-4.2"/><path d="M4 20.5h16"/>',
-    esci: '<path d="M14.5 12H4M8 8l-4 4 4 4"/><path d="M11 4.5h6.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H11"/>',
+    flusso:     ['................', '................', '...###..........', '...####.........', '...#####........', '...######.......', '...#######......', '...########.....', '...########.....', '...#######......', '...######.......', '...#####........', '...####.........', '...###..........', '................', '................'],
+    dashboard:  ['................', '.######..######.', '.######..######.', '.######..######.', '.######..######.', '.######..######.', '.######..######.', '................', '................', '.######..######.', '.######..######.', '.######..######.', '.######..######.', '.######..######.', '.######..######.', '................'],
+    ideas:      ['................', '................', '......####......', '.....######.....', '....########....', '....########....', '....########....', '....########....', '.....######.....', '......####......', '......####......', '................', '.....######.....', '................', '......####......', '................'],
+    projects:   ['................', '................', '.####...........', '.####..########.', '.####..########.', '.####...........', '................', '.####...........', '.####..########.', '.####..########.', '.####...........', '................', '.####...........', '.####..########.', '.####..########.', '.####...........'],
+    vault:      ['................', '.......###......', '......#####.....', '.....#######....', '....###...###...', '....###...###...', '....###...###...', '....#########...', '...###########..', '...###########..', '...###########..', '...###########..', '...###########..', '...###########..', '...###########..', '................'],
+    accounts:   ['................', '................', '.......###......', '......#####.....', '.....#######....', '.....#######....', '.....#######....', '......#####.....', '.......###......', '......#####.....', '....#########...', '...###########..', '..#############.', '..#############.', '..#############.', '................'],
+    drive:      ['................', '................', '..##########....', '..#.........#...', '..#..######..#..', '..#..#....#..#..', '..#..#....#..#..', '..#..######..#..', '..#..........#..', '..#..######..#..', '..#..######..#..', '..#..######..#..', '..#..######..#..', '..############..', '................', '................'],
+    dossiers:   ['................', '................', '................', '................', '..#####.........', '..#####.........', '..#############.', '..#...........#.', '..#...........#.', '..#...........#.', '..#...........#.', '..#...........#.', '..#...........#.', '..#############.', '................', '................'],
+    trash:      ['................', '......####......', '......####......', '...##########...', '...##########...', '....########....', '....#......#....', '....#.#.#.##....', '....#.#.#.##....', '....#.#.#.##....', '....#.#.#.##....', '....#.#.#.##....', '....#.#.#.##....', '....#......#....', '....########....', '................'],
+    security:   ['................', '..#############.', '..#############.', '..#############.', '..#############.', '..#####..######.', '..###.......###.', '..###.......###.', '..#####..######.', '..#####..######.', '...###########..', '....#########...', '......#####.....', '.......###......', '........#.......', '................'],
+    piu:        ['................', '................', '................', '................', '................', '................', '................', '..###..###..###.', '..###..###..###.', '..###..###..###.', '................', '................', '................', '................', '................', '................'],
+    cerca:      ['................', '................', '.....###........', '....#####.......', '...#######......', '..###...###.....', '..###...###.....', '..###...###.....', '...#######......', '....#######.....', '.....###.###....', '..........###...', '...........###..', '............###.', '.............###', '..............#.'],
+    chiudi:     ['................', '................', '..##.........##.', '..###.......##..', '...###.....##...', '....###...##....', '.....###.##.....', '......####......', '.......###......', '......#####.....', '.....##..###....', '....##....###...', '...##......###..', '..##........###.', '..#..........#..', '................'],
+    backup:     ['................', '.......##.......', '.......##.......', '.......##.......', '.......##.......', '.......##.......', '....##.##.##....', '.....######.....', '......####......', '.......##.......', '..############..', '..#..........#..', '..#..........#..', '..#..........#..', '..############..', '................'],
+    esci:       ['................', '................', '..#######.......', '..#.....#.......', '..#.....#.##....', '..#.....#..##...', '..#.....#...##..', '..#.....#.#####.', '..#.....#.#####.', '..#.....#...##..', '..#.....#..##...', '..#.....#.##....', '..#.....#.......', '..#######.......', '................', '................'],
   };
 
   function icona(nome) {
-    return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[nome] || ''}</svg>`;
+    const bitmap = ICONS[nome];
+    if (!bitmap) return '';
+    let rects = '';
+    bitmap.forEach((row, y) => {
+      for (let x = 0; x < row.length; x++) {
+        if (row[x] === '#') rects += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
+      }
+    });
+    return `<svg class="icon" viewBox="0 0 16 16" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">${rects}</svg>`;
   }
 
   // Elenco unico delle sezioni: da qui nascono sia il menu laterale del
@@ -233,12 +243,95 @@
   const sheet = document.getElementById('sheet');
   const sheetBackdrop = document.getElementById('sheet-backdrop');
 
-  // Menu laterale (schermo largo)
-  SECTIONS.forEach((s) => {
-    nav.appendChild(el(`
+  // Menu laterale (schermo largo): raggruppato Flusso / Fascicoli / Archivi.
+  // Tabbar e foglio restano piatti (SECTIONS), invariati sotto.
+  const FLUSSO_FILTERS = [
+    { filter: 'oggi', label: 'oggi' },
+    { filter: 'settimana', label: 'questa settimana' },
+    { filter: 'senza-fascicolo', label: 'senza fascicolo' },
+  ];
+
+  const flussoSection = SECTIONS.find((s) => s.view === 'flusso');
+  const flussoGroup = el('<div class="sidebar-group"></div>');
+  flussoGroup.appendChild(el('<div class="sidebar-group-title">Flusso</div>'));
+  flussoGroup.appendChild(el(`
+    <button class="nav-item" data-view="flusso">${icona('flusso')}<span>${esc(flussoSection.label)}</span></button>
+  `));
+  FLUSSO_FILTERS.forEach((f) => {
+    const row = el(`<button class="sub-nav-item" data-filter="${f.filter}"><span>${esc(f.label)}</span></button>`);
+    row.addEventListener('click', () => { closeSheet(); render('flusso', { filter: f.filter }); });
+    flussoGroup.appendChild(row);
+  });
+  nav.appendChild(flussoGroup);
+
+  const fascicoliGroup = el('<div class="sidebar-group"></div>');
+  fascicoliGroup.appendChild(el('<div class="sidebar-group-title">Fascicoli</div>'));
+  const dossierTree = el('<div id="sidebar-dossier-tree"></div>');
+  fascicoliGroup.appendChild(dossierTree);
+  nav.appendChild(fascicoliGroup);
+
+  // Conteggi per tipo mostrati sotto ogni fascicolo espanso.
+  const TREE_TYPE_LABELS = { document: 'documenti', idea: 'idee', project: 'progetti', account: 'account', vault: 'vault' };
+  const expandedDossiers = new Set();
+
+  async function refreshSidebarDossiers() {
+    let dossiers;
+    try { dossiers = await api('/dossiers'); } catch (err) { return; }
+    dossierTree.innerHTML = '';
+    if (!dossiers.length) {
+      dossierTree.appendChild(el('<div class="tree-empty">Nessun fascicolo ancora.</div>'));
+      return;
+    }
+    dossiers.forEach((d) => {
+      const wrap = el('<div></div>');
+      const open = expandedDossiers.has(d.id);
+      const row = el(`
+        <button type="button" class="tree-dossier">
+          <span class="tree-dossier-toggle ${open ? 'open' : ''}">▸</span>
+          <span class="tree-dossier-dot">◆</span>
+          <span class="tree-dossier-label">${esc(d.title)}</span>
+          <span class="tree-dossier-count">${d.items.length}</span>
+        </button>
+      `);
+      const subWrap = el(`<div class="${open ? '' : 'hidden'}"></div>`);
+      const groups = {};
+      d.items.forEach((it) => { (groups[it.type] = groups[it.type] || []).push(it); });
+      const groupKeys = Object.keys(groups);
+      if (!groupKeys.length) {
+        subWrap.appendChild(el('<div class="tree-empty">Nessun elemento collegato.</div>'));
+      } else {
+        groupKeys.forEach((type) => {
+          const subRow = el(`
+            <button type="button" class="tree-sub">
+              <span class="tree-sub-dot">·</span><span>${esc(TREE_TYPE_LABELS[type] || type)}</span>
+              <span class="tree-sub-count">${groups[type].length}</span>
+            </button>
+          `);
+          subRow.addEventListener('click', () => { closeSheet(); render('dossiers', { highlight: d.id }); });
+          subWrap.appendChild(subRow);
+        });
+      }
+      row.querySelector('.tree-dossier-toggle').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const nowHidden = subWrap.classList.toggle('hidden');
+        row.querySelector('.tree-dossier-toggle').classList.toggle('open', !nowHidden);
+        if (nowHidden) expandedDossiers.delete(d.id); else expandedDossiers.add(d.id);
+      });
+      row.addEventListener('click', () => { closeSheet(); render('dossiers', { highlight: d.id }); });
+      wrap.appendChild(row);
+      wrap.appendChild(subWrap);
+      dossierTree.appendChild(wrap);
+    });
+  }
+
+  const archiviGroup = el('<div class="sidebar-group"></div>');
+  archiviGroup.appendChild(el('<div class="sidebar-group-title">Archivi</div>'));
+  SECTIONS.filter((s) => s.view !== 'flusso').forEach((s) => {
+    archiviGroup.appendChild(el(`
       <button class="nav-item" data-view="${s.view}">${icona(s.view)}<span>${esc(s.label)}</span></button>
     `));
   });
+  nav.appendChild(archiviGroup);
 
   // Barra in basso (telefono): le sezioni piu' usate piu' "Altro"
   SECTIONS.filter((s) => s.tab).forEach((s) => {
@@ -295,16 +388,57 @@
     });
   });
 
-  function setActiveNav(view) {
+  function setActiveNav(view, opts = {}) {
     document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
+    document.querySelectorAll('.sub-nav-item').forEach((b) => {
+      b.classList.toggle('active', view === 'flusso' && !!opts.filter && b.dataset.filter === opts.filter);
+    });
     // Se la sezione attiva non e' fra quelle della barra, resta evidenziato "Altro".
     tabPiu.classList.toggle('active', !SECTIONS.some((s) => s.tab && s.view === view));
+  }
+
+  // ---------------- Breadcrumb + tab di vista ----------------
+  const crumbbar = document.getElementById('crumbbar');
+  const VIEW_LABELS = Object.fromEntries(SECTIONS.map((s) => [s.view, s.label.toLowerCase()]));
+  const FLUSSO_FILTER_LABELS = { oggi: 'oggi', settimana: 'questa settimana', 'senza-fascicolo': 'senza fascicolo' };
+  const VIEW_TABS = [
+    { key: 'flusso', label: 'flusso' },
+    { key: 'tabella', label: 'tabella' },
+    { key: 'bacheca', label: 'bacheca' },
+    { key: 'orbita', label: 'orbita' },
+  ];
+
+  function updateCrumb(view, opts = {}) {
+    crumbbar.innerHTML = '';
+    const path = el('<div class="crumb-path"></div>');
+    path.appendChild(el('<span>~</span>'));
+    path.appendChild(el('<span class="crumb-sep">/</span>'));
+    path.appendChild(el(`<span${opts.filter ? '' : ' class="crumb-current"'}>${esc(VIEW_LABELS[view] || view)}</span>`));
+    if (view === 'flusso' && opts.filter) {
+      path.appendChild(el('<span class="crumb-sep">/</span>'));
+      path.appendChild(el(`<span class="crumb-current">${esc(FLUSSO_FILTER_LABELS[opts.filter] || opts.filter)}</span>`));
+    }
+    crumbbar.appendChild(path);
+
+    if (view === 'flusso') {
+      const tabs = el('<div class="view-tabs"></div>');
+      VIEW_TABS.forEach((t) => {
+        const btn = el(`<button type="button" class="view-tab ${t.key === 'flusso' ? 'active' : ''}">${esc(t.label)}</button>`);
+        btn.addEventListener('click', () => {
+          if (t.key === 'flusso') { render('flusso'); return; }
+          toast('Vista in arrivo');
+        });
+        tabs.appendChild(btn);
+      });
+      crumbbar.appendChild(tabs);
+    }
   }
 
   const views = {}; // popolate piu' sotto
 
   async function render(view, opts = {}) {
-    setActiveNav(view);
+    setActiveNav(view, opts);
+    updateCrumb(view, opts);
     viewRoot.innerHTML = '';
     const loading = el('<div class="empty-state">Carico…</div>');
     viewRoot.appendChild(loading);
@@ -322,6 +456,7 @@
   // piccoli, quindi qualche chiamata in piu' per tenere i numeri aggiornati
   // dopo ogni creazione/eliminazione e' un compromesso ragionevole.
   async function refreshNavCounts() {
+    refreshSidebarDossiers();
     let ideas, projects, vault, accounts, docs, dossiers, trash;
     try {
       [ideas, projects, vault, accounts, docs, dossiers, trash] = await Promise.all([
@@ -393,23 +528,28 @@
 
   const FLUSSO_API_TYPE = { idea: 'idea', progetto: 'project', account: 'account', documento: 'document' };
 
+  // Evidenzia i "#tag" dentro un testo gia' passato da escTrim/esc (sicuro:
+  // i caratteri delle entita' HTML non fanno parte di \w, quindi non si spezzano).
+  function hashtagify(escapedStr) {
+    return escapedStr.replace(/#([a-zA-Z0-9_-]+)/g, '<span class="entry-hashtag">#$1</span>');
+  }
+
   function renderEntryCard(item, linkIndex) {
     const apiType = FLUSSO_API_TYPE[item.kind];
     const links = linkIndex.get(`${apiType}:${item.id}`) || [];
-    const tagClass = { idea: 'tag-accent', progetto: 'tag-accent', documento: 'tag-outline', account: 'tag-neutral' }[item.kind];
 
-    const card = el('<div class="entry-card"></div>');
+    const card = el('<div class="entry-block"></div>');
     const body = el('<div class="entry-card-body"></div>');
     body.appendChild(el(`
       <div class="entry-meta">
-        <span class="tag ${tagClass}">${item.kind}</span>
+        <span class="entry-type">[${esc(item.kind)}]</span>
         <span class="entry-time">${fmtTime(item.created_at)}</span>
         ${links[0] ? `<span class="entry-fascicolo">◆ ${esc(links[0].title)}</span>` : ''}
       </div>
     `));
 
     if (item.kind === 'idea') {
-      body.appendChild(el(`<div class="entry-text">${escTrim(item.body || item.title, 260)}</div>`));
+      body.appendChild(el(`<div class="entry-text">${hashtagify(escTrim(item.body || item.title, 260))}</div>`));
       if ((item.tags || []).length) {
         body.appendChild(el(`<div class="tag-row" style="margin-top:9px">${item.tags.map((t) => `<span class="tag tag-neutral">${esc(t)}</span>`).join('')}</div>`));
       }
@@ -478,7 +618,7 @@
     return card;
   }
 
-  views.flusso = async (root) => {
+  views.flusso = async (root, opts = {}) => {
     const [ideas, projects, accounts, documents, dossiers, reminders] = await Promise.all([
       api('/ideas'), api('/projects'), api('/accounts'), api('/drive'),
       api('/dossiers'), api('/search/reminders/upcoming?days=45'),
@@ -495,12 +635,24 @@
       });
     });
 
-    const entries = [
+    const allEntries = [
       ...ideas.map((x) => ({ kind: 'idea', ...x })),
       ...projects.map((x) => ({ kind: 'progetto', ...x })),
       ...accounts.map((x) => ({ kind: 'account', ...x })),
       ...documents.map((x) => ({ kind: 'documento', ...x })),
-    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 60);
+    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    // Sotto-filtri della sidebar (Flusso > oggi / questa settimana / senza fascicolo).
+    let entries = allEntries;
+    if (opts.filter === 'oggi') {
+      entries = entries.filter((x) => dayLabel(x.created_at).startsWith('OGGI'));
+    } else if (opts.filter === 'settimana') {
+      const weekAgo = Date.now() - 7 * 86400000;
+      entries = entries.filter((x) => new Date(x.created_at).getTime() >= weekAgo);
+    } else if (opts.filter === 'senza-fascicolo') {
+      entries = entries.filter((x) => !linkIndex.has(`${FLUSSO_API_TYPE[x.kind]}:${x.id}`));
+    }
+    entries = entries.slice(0, 60);
 
     root.innerHTML = '';
     root.appendChild(el('<div class="view-header"><h2>Flusso</h2></div>'));
@@ -509,70 +661,202 @@
     const main = el('<div></div>');
     const rail = el('<aside class="right-rail"></aside>');
 
-    // ---- composer ----
+    // ---- composer a blocco: "/" per il tipo, "@" per collegare un fascicolo ----
     let selectedDossier = null;
     const composer = el(`
       <div class="composer">
-        <textarea id="flusso-text" placeholder="A cosa stai pensando?" rows="2"></textarea>
+        <textarea id="flusso-text" placeholder="Scrivi qualsiasi cosa — poi decidi cos'e'" rows="2"></textarea>
+        <div id="flusso-link-badge"></div>
         <div class="composer-row">
-          <button type="button" class="chip" data-chip="documento">+ documento</button>
-          <button type="button" class="chip" data-chip="account">+ account</button>
-          <button type="button" class="chip" data-chip="scadenza" title="In arrivo">+ scadenza</button>
-          <button type="button" class="chip chip-fascicolo" data-chip="fascicolo">+ fascicolo</button>
+          <button type="button" class="chip" data-insert="/idea">/idea</button>
+          <button type="button" class="chip" data-insert="/doc">/doc</button>
+          <button type="button" class="chip" data-insert="/scadenza" title="In arrivo">/scadenza</button>
+          <button type="button" class="chip" data-insert="/progetto">/progetto</button>
+          <button type="button" class="chip chip-fascicolo" data-insert="@">@fascicolo</button>
+          <button type="button" class="chip" data-insert="#">#tag</button>
           <button type="button" class="btn btn-primary" id="flusso-save">Salva</button>
         </div>
         <div class="composer-hint">
           <span><span class="kb">⌘ ⏎</span> salva</span>
-          <span>collega un fascicolo per tenerlo insieme al resto</span>
+          <span>/ per il tipo · @ per collegare un fascicolo · # per un tag</span>
         </div>
       </div>
     `);
     const textarea = composer.querySelector('#flusso-text');
-    const fascicoloChip = composer.querySelector('[data-chip="fascicolo"]');
+    const linkBadgeWrap = composer.querySelector('#flusso-link-badge');
+    // Tag gia' usati nelle idee esistenti, suggeriti mentre si scrive "#".
+    const knownTags = [...new Set(ideas.flatMap((x) => x.tags || []))].sort();
 
-    composer.querySelector('[data-chip="documento"]').addEventListener('click', async () => {
-      await render('drive');
-      const btn = document.getElementById('new-doc');
-      if (btn) btn.click();
-    });
-    composer.querySelector('[data-chip="account"]').addEventListener('click', async () => {
-      await render('accounts');
-      const btn = document.getElementById('new-account');
-      if (btn) btn.click();
-    });
-    fascicoloChip.addEventListener('click', () => {
-      const wrap = el('<div></div>');
-      if (!dossiers.length) {
-        wrap.appendChild(el('<p class="card-sub">Non hai ancora nessun fascicolo. Creane uno dalla sezione Fascicoli.</p>'));
-      } else {
-        dossiers.forEach((d) => {
-          const row = el(`<div class="trash-row"><span>${esc(d.title)}</span><button class="btn btn-sm btn-primary">Scegli</button></div>`);
-          row.querySelector('button').addEventListener('click', () => {
-            selectedDossier = d;
-            fascicoloChip.textContent = `◆ ${d.title}`;
-            closeModal();
-          });
-          wrap.appendChild(row);
-        });
+    function renderLinkBadge() {
+      linkBadgeWrap.innerHTML = '';
+      if (!selectedDossier) return;
+      const badge = el(`<span class="composer-link-badge">→ ${esc(selectedDossier.title)} <button type="button" title="Rimuovi">✕</button></span>`);
+      badge.querySelector('button').addEventListener('click', () => { selectedDossier = null; renderLinkBadge(); });
+      linkBadgeWrap.appendChild(badge);
+    }
+
+    // ---- autocomplete /comandi e @fascicolo ----
+    const COMMANDS = [
+      { token: '/idea', desc: 'nota veloce' },
+      { token: '/doc', desc: 'carica documento' },
+      { token: '/scadenza', desc: 'in arrivo' },
+      { token: '/progetto', desc: 'nuovo progetto' },
+    ];
+    let menuEl = null;
+    let menuItems = [];
+    let menuActive = 0;
+    let menuTrigger = null;
+
+    function closeMenu() {
+      if (menuEl) { menuEl.remove(); menuEl = null; }
+      menuItems = [];
+      menuTrigger = null;
+    }
+
+    function highlightMenu() {
+      if (!menuEl) return;
+      menuEl.querySelectorAll('.composer-menu-item').forEach((n, i) => n.classList.toggle('active', i === menuActive));
+    }
+
+    async function selectMenuItem(i) {
+      const item = menuItems[i];
+      const trigger = menuTrigger;
+      closeMenu();
+      if (!item || !trigger) return;
+
+      if (trigger.type === '#') {
+        // il tag e' testo vero e proprio: si completa restando nella frase,
+        // non viene rimosso come i comandi "/" e le menzioni "@".
+        const before = textarea.value.slice(0, trigger.start);
+        const after = textarea.value.slice(trigger.end);
+        const needsSpace = !/^\s/.test(after);
+        textarea.value = before + item.token + (needsSpace ? ' ' : '') + after;
+        const caret = before.length + item.token.length + (needsSpace ? 1 : 0);
+        textarea.focus();
+        textarea.setSelectionRange(caret, caret);
+        return;
       }
-      openModal('Collega a un fascicolo', wrap);
+
+      // rimuove il token digitato ("/xxx" o "@xxx") dal testo, mantenendo il resto
+      const before = textarea.value.slice(0, trigger.start);
+      const after = textarea.value.slice(trigger.end);
+      textarea.value = before + after;
+      const caret = before.length;
+      textarea.focus();
+      textarea.setSelectionRange(caret, caret);
+
+      if (trigger.type === '@') {
+        selectedDossier = item.dossier;
+        renderLinkBadge();
+        return;
+      }
+      if (item.token === '/idea') return; // e' gia' il tipo di default
+      if (item.token === '/scadenza') { toast('In arrivo'); return; }
+      if (item.token === '/doc') {
+        await render('drive');
+        const btn = document.getElementById('new-doc');
+        if (btn) btn.click();
+        return;
+      }
+      if (item.token === '/progetto') {
+        await render('projects');
+        const btn = document.getElementById('new-project');
+        if (btn) btn.click();
+      }
+    }
+
+    function openMenu(items) {
+      if (menuEl) { menuEl.remove(); menuEl = null; }
+      if (!items.length) { menuItems = []; return; }
+      menuItems = items;
+      menuActive = 0;
+      menuEl = el('<div class="composer-menu"></div>');
+      items.forEach((it, i) => {
+        const row = el(`
+          <div class="composer-menu-item ${i === 0 ? 'active' : ''}">
+            <span class="cmi-token">${esc(it.token)}</span><span class="cmi-desc">${esc(it.desc)}</span>
+          </div>
+        `);
+        row.addEventListener('mousedown', (e) => { e.preventDefault(); selectMenuItem(i); });
+        menuEl.appendChild(row);
+      });
+      composer.appendChild(menuEl);
+    }
+
+    function currentTrigger() {
+      const pos = textarea.selectionStart;
+      const upToCaret = textarea.value.slice(0, pos);
+      const match = upToCaret.match(/(^|\s)([/@#][^\s]*)$/);
+      if (!match) return null;
+      const tokenStart = pos - match[2].length;
+      return { type: match[2][0], query: match[2].slice(1).toLowerCase(), start: tokenStart, end: pos };
+    }
+
+    function updateMenu() {
+      const trigger = currentTrigger();
+      menuTrigger = trigger;
+      if (!trigger) { closeMenu(); return; }
+      if (trigger.type === '/') {
+        openMenu(COMMANDS.filter((c) => c.token.slice(1).startsWith(trigger.query)));
+      } else if (trigger.type === '@') {
+        openMenu(
+          dossiers
+            .filter((d) => d.title.toLowerCase().includes(trigger.query))
+            .map((d) => ({ token: '@' + d.title, desc: 'fascicolo', dossier: d }))
+        );
+      } else {
+        openMenu(
+          knownTags
+            .filter((t) => t.toLowerCase().startsWith(trigger.query))
+            .map((t) => ({ token: '#' + t, desc: 'tag' }))
+        );
+      }
+    }
+
+    textarea.addEventListener('input', updateMenu);
+    textarea.addEventListener('click', updateMenu);
+    textarea.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); saveEntry(); return; }
+      if (!menuEl) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); menuActive = (menuActive + 1) % menuItems.length; highlightMenu(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); menuActive = (menuActive - 1 + menuItems.length) % menuItems.length; highlightMenu(); }
+      else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); selectMenuItem(menuActive); }
+      else if (e.key === 'Escape') { closeMenu(); }
+    });
+    document.addEventListener('click', (e) => {
+      if (menuEl && !composer.contains(e.target)) closeMenu();
+    });
+
+    // Chip sotto il testo: scorciatoie che inseriscono il trigger e aprono subito il menu.
+    composer.querySelectorAll('[data-insert]').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const insert = chip.dataset.insert;
+        const pos = textarea.selectionStart;
+        const needsSpace = pos > 0 && !/\s/.test(textarea.value[pos - 1] || '');
+        const prefix = needsSpace ? ' ' : '';
+        textarea.value = textarea.value.slice(0, pos) + prefix + insert + textarea.value.slice(pos);
+        const caret = pos + prefix.length + insert.length;
+        textarea.focus();
+        textarea.setSelectionRange(caret, caret);
+        updateMenu();
+      });
     });
 
     async function saveEntry() {
       const text = textarea.value.trim();
       if (!text) return;
       const title = text.length > 80 ? text.slice(0, 80) + '…' : text;
-      const idea = await api('/ideas', { method: 'POST', body: JSON.stringify({ title, body: text, tags: [] }) });
+      // I tag restano nel testo (come su Twitter/Notion): li estraiamo solo
+      // per popolare il campo "tags" gia' usato altrove per filtrare/raggruppare.
+      const tags = [...new Set((text.match(/#([a-zA-Z0-9_-]+)/g) || []).map((t) => t.slice(1)))];
+      const idea = await api('/ideas', { method: 'POST', body: JSON.stringify({ title, body: text, tags }) });
       if (selectedDossier) {
         await api(`/dossiers/${selectedDossier.id}/links`, { method: 'POST', body: JSON.stringify({ item_type: 'idea', item_id: idea.id }) });
       }
       toast('Aggiunto al flusso');
-      render('flusso');
+      render('flusso', opts);
     }
     composer.querySelector('#flusso-save').addEventListener('click', saveEntry);
-    textarea.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); saveEntry(); }
-    });
     main.appendChild(composer);
 
     // ---- feed ----
@@ -591,7 +875,7 @@
     }
     layout.appendChild(main);
 
-    // ---- right rail ----
+    // ---- right rail (statistiche sull'intero flusso, non sul sotto-filtro attivo) ----
     const deadlinesBlock = el('<div class="rail-block"><h6>Scadenze</h6></div>');
     if (!reminders.length) {
       deadlinesBlock.appendChild(el('<p class="card-sub">Nessuna scadenza nei prossimi 45 giorni.</p>'));
@@ -627,8 +911,8 @@
 
     const weekBlock = el('<div class="rail-block"><h6>Questa settimana</h6></div>');
     const weekAgo = Date.now() - 7 * 86400000;
-    const recent = entries.filter((x) => new Date(x.created_at).getTime() >= weekAgo);
-    const unlinked = entries.filter((x) => !linkIndex.has(`${FLUSSO_API_TYPE[x.kind]}:${x.id}`)).length;
+    const recent = allEntries.filter((x) => new Date(x.created_at).getTime() >= weekAgo);
+    const unlinked = allEntries.filter((x) => !linkIndex.has(`${FLUSSO_API_TYPE[x.kind]}:${x.id}`)).length;
     weekBlock.appendChild(el(`
       <div class="rail-stats">
         <div>${recent.filter((x) => x.kind === 'idea').length} note · ${recent.filter((x) => x.kind === 'documento').length} documenti</div>
