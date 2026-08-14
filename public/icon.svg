@@ -1,5 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<rect width="64" height="64" rx="14" fill="#101219"/>
 <defs>
   <radialGradient id="gEgg" cx="35%" cy="30%" r="75%">
     <stop offset="0%" stop-color="#ffffff"/>
