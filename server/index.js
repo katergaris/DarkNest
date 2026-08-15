@@ -2,6 +2,10 @@ const path = require('path');
 // Percorso esplicito: cosi' "node server/index.js" trova il file .env anche
 // se viene lanciato da una cartella diversa da quella del progetto.
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+// Se SESSION_SECRET/ENCRYPTION_KEY non arrivano da .env, li genera e li salva
+// in data/.secrets.env: deve girare prima di qualunque require che li legga
+// (es. server/crypto.js), quindi resta il primo require applicativo del file.
+require('./secrets').ensureSecrets();
 const express = require('express');
 const session = require('express-session');
 const auth = require('./auth');
@@ -9,24 +13,6 @@ const SqliteStore = require('./session-store');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-const PLACEHOLDER_VALUES = [
-  'cambiami-con-una-stringa-lunga-e-casuale',
-  'cambiami-con-una-passphrase-lunga-e-segreta',
-];
-
-if (!process.env.SESSION_SECRET || PLACEHOLDER_VALUES.includes(process.env.SESSION_SECRET)) {
-  console.error(
-    'SESSION_SECRET mancante o lasciata al valore di esempio. Esegui setup.sh (o setup.ps1 su Windows) oppure imposta un valore casuale nel file .env prima di avviare DarkNest.'
-  );
-  process.exit(1);
-}
-if (process.env.ENCRYPTION_KEY && PLACEHOLDER_VALUES.includes(process.env.ENCRYPTION_KEY)) {
-  console.error(
-    'ENCRYPTION_KEY lasciata al valore di esempio. Esegui setup.sh (o setup.ps1 su Windows) oppure imposta una passphrase casuale nel file .env prima di avviare DarkNest.'
-  );
-  process.exit(1);
-}
 // ENCRYPTION_KEY viene ulteriormente validata (presenza/lunghezza minima) da server/crypto.js al primo require
 
 // --- Durata dell'accesso (SESSION_DAYS nel file .env) ---

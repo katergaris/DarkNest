@@ -1,0 +1,67 @@
+name: darknest
+services:
+  darknest:
+    image: ghcr.io/katergaris/darknest:latest
+    container_name: darknest
+    restart: unless-stopped
+    ports:
+      - target: 3000
+        published: "3000"
+        protocol: tcp
+    environment:
+      PORT: "3000"
+      SESSION_DAYS: "0"
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/data
+        target: /app/data
+      - type: bind
+        source: /DATA/AppData/$AppID/uploads
+        target: /app/uploads
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+    x-casaos:
+      ports:
+        - container: "3000"
+          description:
+            en_US: DarkNest web UI
+            it_IT: Interfaccia web di DarkNest
+      volumes:
+        - container: /app/data
+          description:
+            en_US: Database and generated secrets
+            it_IT: Database e segreti generati automaticamente
+        - container: /app/uploads
+          description:
+            en_US: Files uploaded to Drive
+            it_IT: File caricati nel Drive
+
+x-casaos:
+  id: me.katergaris.darknest
+  architectures:
+    - amd64
+    - arm64
+  main: darknest
+  author: katergaris
+  developer: katergaris
+  category: Productivity
+  title:
+    en_US: DarkNest
+    it_IT: DarkNest
+  tagline:
+    en_US: Self-hosted personal space for ideas, projects, passwords and documents
+    it_IT: Spazio personale self-hosted per idee, progetti, password e documenti
+  description:
+    en_US: "DarkNest is a self-hosted personal space for ideas, projects, an encrypted password vault, accounts and documents, linked together by dossiers. No data leaves your server. On first access it asks you to create your own username and password; no configuration required."
+    it_IT: "DarkNest e' uno spazio personale self-hosted per idee, progetti, un vault password cifrato, account e documenti, collegati tra loro dai fascicoli. Nessun dato lascia il tuo server. Al primo accesso chiede di creare username e password: nessuna configurazione richiesta."
+  icon: https://raw.githubusercontent.com/katergaris/DarkNest/main/public/icon.svg
+  thumbnail: https://raw.githubusercontent.com/katergaris/DarkNest/main/public/icon-512.png
+  index: /
+  port_map: "3000"
+  website: "https://github.com/katergaris/DarkNest"
+  repo: "https://github.com/katergaris/DarkNest"
+  support: "https://github.com/katergaris/DarkNest/issues"

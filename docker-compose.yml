@@ -5,8 +5,15 @@ services:
     restart: unless-stopped
     ports:
       - "${HOST_PORT:-3000}:${PORT:-3000}"
-    env_file:
-      - .env
+    # A differenza di "env_file", con "environment" un .env assente non blocca
+    # l'avvio: senza SESSION_SECRET/ENCRYPTION_KEY il container li genera da
+    # solo (vedi server/secrets.js) e li salva in ./data. Se un .env esiste,
+    # Compose lo legge comunque in automatico per valorizzare queste variabili.
+    environment:
+      PORT: ${PORT:-3000}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      SESSION_DAYS: ${SESSION_DAYS:-0}
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads

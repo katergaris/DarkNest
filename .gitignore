@@ -1,5 +1,6 @@
 node_modules/
 .env
+data/.secrets.env
 data/*.db
 data/*.db-journal
 data/*.db-wal

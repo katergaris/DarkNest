@@ -45,20 +45,41 @@ Lo script controlla che Docker sia installato e avviato, crea automaticamente il
 
 ### Avvio manuale (alternativa allo script)
 
-Se preferisci farlo a mano:
+`.env` è **facoltativo**: se non lo crei, DarkNest genera da solo `SESSION_SECRET` ed `ENCRYPTION_KEY` al primo avvio e li salva in `data/.secrets.env` (sopravvivono a riavvii e rebuild, esattamente come il database). Quindi basta:
+
+```bash
+docker compose up -d --build
+```
+
+Serve un `.env` solo se vuoi personalizzare qualcosa (porta, durata sessione, o portarti dietro tue chiavi):
 
 ```bash
 cp env.example .env
-# apri .env e sostituisci i due valori segnaposto con stringhe casuali lunghe
+# modifica i valori che ti interessano
 docker compose up -d --build
 ```
+
+## Installazione su CasaOS
+
+**Senza terminale** (più rapida): dal pannello CasaOS apri **App Store** → icona **"Installa un'app personalizzata"** → scheda **Docker Compose** → incolla il contenuto di [`casaos-compose.yml`](casaos-compose.yml) → **Installa**. CasaOS scarica l'immagine già pronta (nessuna compilazione sul NAS) e crea da solo le cartelle dati sotto `/DATA/AppData/`. Al primo accesso ti verrà chiesto di creare username e password, esattamente come nell'avvio rapido.
+
+**Da terminale** (SSH o l'app "Terminale" di CasaOS): CasaOS è basato su Debian con Docker già installato, quindi vale la stessa procedura descritta in "Avvio rapido":
+
+```bash
+git clone https://github.com/katergaris/DarkNest.git
+cd DarkNest
+./setup.sh
+```
+
+> Se manca `git`, installalo prima con `sudo apt-get update && sudo apt-get install -y git`.
 
 ## Dati e persistenza
 
 - `./data/darknest.db` — database SQLite (idee, progetti, metadati vault/account/documenti/fascicoli)
+- `./data/.secrets.env` — **solo se non hai creato un `.env` tu stesso**: `SESSION_SECRET` ed `ENCRYPTION_KEY` generati automaticamente al primo avvio
 - `./uploads/` — file caricati nel Drive
 
-Entrambe le cartelle sono montate come volumi Docker: i dati sopravvivono a riavvii e rebuild del container. Fanne comunque un backup periodico (vedi sotto) e **non cancellare mai `.env`** — contiene la chiave con cui sono cifrate le password nel vault.
+Entrambe le cartelle sono montate come volumi Docker: i dati sopravvivono a riavvii e rebuild del container. Fanne comunque un backup periodico (vedi sotto) e **non cancellare mai `./data`** (ne' `.env`, se lo hai creato tu) — è lì che si trova la chiave con cui sono cifrate le password nel vault.
 
 ## Durata dell'accesso
 
