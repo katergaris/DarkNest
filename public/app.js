@@ -53,6 +53,16 @@
     try { return new Date(d).toLocaleDateString('it-IT'); } catch (e) { return d; }
   }
 
+  function parseTags(form) {
+    return form.tags.value.split(',').map((t) => t.trim()).filter(Boolean);
+  }
+
+  function checklistProgress(list) {
+    const total = (list || []).length;
+    const done = (list || []).filter((c) => c.done).length;
+    return { done, total };
+  }
+
   function fmtSize(bytes) {
     if (!bytes) return '0 B';
     // Sotto il KB mostriamo i byte: prima qualsiasi file piccolo risultava "0 KB".
@@ -436,6 +446,15 @@
 
   const views = {}; // popolate piu' sotto
 
+  // Chiusura del menu "/", "@", "#" del composer al click fuori: un solo
+  // listener sul documento, riassegnato da views.flusso ad ogni render.
+  // Prima veniva registrato un nuovo listener ad ogni visita del Flusso e
+  // non veniva mai rimosso, accumulandosi per tutta la sessione.
+  let composerMenuOutsideClick = null;
+  document.addEventListener('click', (e) => {
+    if (composerMenuOutsideClick) composerMenuOutsideClick(e);
+  });
+
   async function render(view, opts = {}) {
     setActiveNav(view, opts);
     updateCrumb(view, opts);
@@ -488,7 +507,7 @@
     } else {
       dossiers.forEach((d) => {
         const row = el(`
-          <div class="trash-row">
+          <div class="trash-row row-card">
             <span>${esc(d.title)}</span>
             <button class="btn btn-sm btn-primary">Collega</button>
           </div>
@@ -567,8 +586,7 @@
       `));
     } else if (item.kind === 'progetto') {
       body.appendChild(el(`<div class="entry-text">${esc(item.title)}</div>`));
-      const total = (item.checklist || []).length;
-      const done = (item.checklist || []).filter((c) => c.done).length;
+      const { done, total } = checklistProgress(item.checklist);
       if (total) {
         const pct = Math.round((done / total) * 100);
         body.appendChild(el(`
@@ -596,7 +614,7 @@
         const form = ideaModal(item);
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
-          const tags = form.tags.value.split(',').map((t) => t.trim()).filter(Boolean);
+          const tags = parseTags(form);
           await api(`/ideas/${item.id}`, { method: 'PUT', body: JSON.stringify({ title: form.title.value, body: form.body.value, tags }) });
           closeModal(); toast('Idea aggiornata'); render('flusso');
         });
@@ -677,7 +695,7 @@
           <button type="button" class="btn btn-primary" id="flusso-save">Salva</button>
         </div>
         <div class="composer-hint">
-          <span><span class="kb">⌘ ⏎</span> salva</span>
+          <span><span class="kb">Ctrl</span>+<span class="kb">Invio</span> salva</span>
           <span>/ per il tipo · @ per collegare un fascicolo · # per un tag</span>
         </div>
       </div>
@@ -823,9 +841,9 @@
       else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); selectMenuItem(menuActive); }
       else if (e.key === 'Escape') { closeMenu(); }
     });
-    document.addEventListener('click', (e) => {
+    composerMenuOutsideClick = (e) => {
       if (menuEl && !composer.contains(e.target)) closeMenu();
-    });
+    };
 
     // Chip sotto il testo: scorciatoie che inseriscono il trigger e aprono subito il menu.
     composer.querySelectorAll('[data-insert]').forEach((chip) => {
@@ -1012,7 +1030,7 @@
       const form = ideaModal();
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const tags = form.tags.value.split(',').map((t) => t.trim()).filter(Boolean);
+        const tags = parseTags(form);
         await api('/ideas', { method: 'POST', body: JSON.stringify({ title: form.title.value, body: form.body.value, tags }) });
         closeModal(); toast('Idea salvata'); render('ideas');
       });
@@ -1043,7 +1061,7 @@
         const form = ideaModal(idea);
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
-          const tags = form.tags.value.split(',').map((t) => t.trim()).filter(Boolean);
+          const tags = parseTags(form);
           await api(`/ideas/${idea.id}`, { method: 'PUT', body: JSON.stringify({ title: form.title.value, body: form.body.value, tags }) });
           closeModal(); toast('Idea aggiornata'); render('ideas');
         });
@@ -1114,7 +1132,7 @@
       const form = projectModal();
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const tags = form.tags.value.split(',').map((t) => t.trim()).filter(Boolean);
+        const tags = parseTags(form);
         const checklist = collectChecklist(form, []);
         await api('/projects', { method: 'POST', body: JSON.stringify({ title: form.title.value, description: form.description.value, status: form.status.value, checklist, tags }) });
         closeModal(); toast('Progetto creato'); render('projects');
@@ -1130,8 +1148,7 @@
 
     const grid = el('<div class="grid"></div>');
     projects.forEach((p) => {
-      const done = (p.checklist || []).filter((c) => c.done).length;
-      const total = (p.checklist || []).length;
+      const { done, total } = checklistProgress(p.checklist);
       const card = el(`
         <div class="card">
           <span class="status-pill status-${p.status}">${p.status.replace('_', ' ')}</span>
@@ -1150,7 +1167,7 @@
         const form = projectModal(p);
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
-          const tags = form.tags.value.split(',').map((t) => t.trim()).filter(Boolean);
+          const tags = parseTags(form);
           const checklist = collectChecklist(form, p.checklist);
           await api(`/projects/${p.id}`, { method: 'PUT', body: JSON.stringify({ title: form.title.value, description: form.description.value, status: form.status.value, checklist, tags }) });
           closeModal(); toast('Progetto aggiornato'); render('projects');
@@ -1232,7 +1249,7 @@
       const form = vaultModal();
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const tags = form.tags.value.split(',').map((t) => t.trim()).filter(Boolean);
+        const tags = parseTags(form);
         await api('/vault', { method: 'POST', body: JSON.stringify({ site: form.site.value, username: form.username.value, password: form.password.value, url: form.url.value, notes: form.notes.value, tags }) });
         closeModal(); toast('Voce salvata'); render('vault');
       });
@@ -1247,7 +1264,7 @@
 
     entries.forEach((entry) => {
       const row = el(`
-        <div class="vault-row">
+        <div class="vault-row row-card">
           <strong>${esc(entry.site)}</strong>
           <span>${esc(entry.username) || '—'}</span>
           <span class="password-field" data-pwd>••••••••</span>
@@ -1277,7 +1294,7 @@
         const form = vaultModal(entry);
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
-          const tags = form.tags.value.split(',').map((t) => t.trim()).filter(Boolean);
+          const tags = parseTags(form);
           const payload = { site: form.site.value, username: form.username.value, url: form.url.value, notes: form.notes.value, tags };
           if (form.password.value) payload.password = form.password.value;
           await api(`/vault/${entry.id}`, { method: 'PUT', body: JSON.stringify(payload) });
@@ -1339,7 +1356,7 @@
       const form = accountModal();
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const tags = form.tags.value.split(',').map((t) => t.trim()).filter(Boolean);
+        const tags = parseTags(form);
         await api('/accounts', { method: 'POST', body: JSON.stringify({ service: form.service.value, email: form.email.value, plan: form.plan.value, renewal_date: form.renewal_date.value || null, notes: form.notes.value, tags }) });
         closeModal(); toast('Account salvato'); render('accounts');
       });
@@ -1371,7 +1388,7 @@
         const form = accountModal(a);
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
-          const tags = form.tags.value.split(',').map((t) => t.trim()).filter(Boolean);
+          const tags = parseTags(form);
           await api(`/accounts/${a.id}`, { method: 'PUT', body: JSON.stringify({ service: form.service.value, email: form.email.value, plan: form.plan.value, renewal_date: form.renewal_date.value || null, notes: form.notes.value, tags }) });
           closeModal(); toast('Account aggiornato'); render('accounts');
         });
@@ -1417,7 +1434,7 @@
       `);
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const tags = form.tags.value.split(',').map((t) => t.trim()).filter(Boolean);
+        const tags = parseTags(form);
         const fd = new FormData();
         fd.append('file', form.file.files[0]);
         fd.append('folder', form.folder.value);
@@ -1437,7 +1454,7 @@
 
     docs.forEach((d) => {
       const row = el(`
-        <div class="doc-row">
+        <div class="doc-row row-card">
           <div>
             <div class="doc-name">${esc(d.original_name)}</div>
             <div class="doc-meta">${d.folder ? esc(d.folder) + ' · ' : ''}${fmtSize(d.size)}${d.expiry_date ? ' · scade ' + fmtDate(d.expiry_date) : ''}</div>
@@ -1557,7 +1574,7 @@
 
     items.forEach((item) => {
       const row = el(`
-        <div class="trash-row">
+        <div class="trash-row row-card">
           <span><span class="chip-type">${esc(TYPE_LABELS[item.type] || item.type)}</span> &nbsp;${esc(item.label)}</span>
           <span class="card-actions" style="padding:0">
             <button class="btn btn-sm" data-restore>Ripristina</button>
