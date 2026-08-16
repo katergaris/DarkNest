@@ -385,7 +385,7 @@ input:focus, textarea:focus, select:focus {
   gap: 8px;
   transition: box-shadow 0.4s, border-color 0.4s;
 }
-.card.card-highlight { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.card.card-highlight, .row-card.card-highlight { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
 
 .card-title { font-weight: 600; font-size: 1rem; margin: 0; }
 .card-sub { color: var(--text-muted); font-size: 0.82rem; margin: 0; }
@@ -434,6 +434,10 @@ input:focus, textarea:focus, select:focus {
   padding: 10px 13px;
   font-size: 0.87rem;
 }
+.reminder-item-link {
+  width: 100%; border: none; text-align: left; color: var(--text); font-family: inherit; cursor: pointer;
+}
+.reminder-item-link:hover { background: var(--surface-hover); }
 .reminder-date { color: var(--accent-soft); font-family: var(--font-mono); font-size: 0.8rem; }
 
 .dashboard-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; }
@@ -606,7 +610,9 @@ input:focus, textarea:focus, select:focus {
   display: flex;
   align-items: center;
   gap: 6px;
+  cursor: pointer;
 }
+.dossier-chip:hover { border-color: color-mix(in srgb, var(--accent) 40%, transparent); color: var(--accent-soft); }
 .dossier-chip button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.75rem; padding: 0; }
 .chip-type { color: var(--accent-soft); text-transform: uppercase; font-size: 0.62rem; letter-spacing: 0.5px; }
 

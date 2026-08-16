@@ -84,6 +84,18 @@
     frag.querySelector('.modal-body').appendChild(bodyNode);
     frag.querySelector('.modal-close').addEventListener('click', closeModal);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
+    // Con una connessione lenta, piu' click sul pulsante "Salva" prima che la
+    // prima richiesta finisca creavano piu' voci identiche. Il bottone si
+    // riabilita da solo dopo un po' nel caso la richiesta fallisca e la
+    // finestra resti aperta (altrimenti non si potrebbe piu' riprovare).
+    const form = bodyNode.tagName === 'FORM' ? bodyNode : bodyNode.querySelector('form');
+    const submitBtn = form && form.querySelector('button[type="submit"]');
+    if (form && submitBtn) {
+      form.addEventListener('submit', () => {
+        submitBtn.disabled = true;
+        setTimeout(() => { submitBtn.disabled = false; }, 8000);
+      });
+    }
     document.body.appendChild(frag);
     activeModal = document.body.lastElementChild;
   }
@@ -282,6 +294,9 @@
 
   // Conteggi per tipo mostrati sotto ogni fascicolo espanso.
   const TREE_TYPE_LABELS = { document: 'documenti', idea: 'idee', project: 'progetti', account: 'account', vault: 'vault' };
+  // Sezione in cui vive ciascun tipo di elemento collegato a un fascicolo:
+  // usata per aprire l'elemento cliccandolo, invece di poterlo solo scollegare.
+  const TYPE_TO_VIEW = { document: 'drive', idea: 'ideas', project: 'projects', account: 'accounts', vault: 'vault' };
   const expandedDossiers = new Set();
 
   async function refreshSidebarDossiers() {
@@ -546,6 +561,9 @@
   }
 
   const FLUSSO_API_TYPE = { idea: 'idea', progetto: 'project', account: 'account', documento: 'document' };
+  // Percorso REST (e vista di destinazione) per ciascun tipo di elemento del flusso:
+  // "documento" e' l'unico dove il nome del tipo non coincide col nome della sezione/rotta.
+  const FLUSSO_SECTION = { idea: 'ideas', progetto: 'projects', account: 'accounts', documento: 'drive' };
 
   // Evidenzia i "#tag" dentro un testo gia' passato da escTrim/esc (sicuro:
   // i caratteri delle entita' HTML non fanno parte di \w, quindi non si spezzano).
@@ -622,10 +640,18 @@
         openModal('Modifica idea', form);
       } else {
         // account/progetto/documento: la modifica completa vive gia' nella loro sezione.
-        render({ progetto: 'projects', account: 'accounts', documento: 'drive' }[item.kind]);
+        render(FLUSSO_SECTION[item.kind]);
       }
     });
     actions.appendChild(modifica);
+
+    const elimina = el('<button type="button">Elimina</button>');
+    elimina.addEventListener('click', async () => {
+      if (!confirm('Spostare questo elemento nel cestino?')) return;
+      await api(`/${FLUSSO_SECTION[item.kind]}/${item.id}`, { method: 'DELETE' });
+      toast('Spostato nel cestino'); render('flusso');
+    });
+    actions.appendChild(elimina);
 
     if (links.length) {
       actions.appendChild(el(`<span class="entry-actions-meta">${links.length} collegament${links.length === 1 ? 'o' : 'i'}</span>`));
@@ -683,7 +709,7 @@
     let selectedDossier = null;
     const composer = el(`
       <div class="composer">
-        <textarea id="flusso-text" placeholder="Scrivi qualsiasi cosa — poi decidi cos'e'" rows="2"></textarea>
+        <textarea id="flusso-text" placeholder="Scrivi un'idea — o / per un altro tipo, @ per un fascicolo, # per un tag" rows="2"></textarea>
         <div id="flusso-link-badge"></div>
         <div class="composer-row">
           <button type="button" class="chip" data-insert="/idea">/idea</button>
@@ -860,19 +886,28 @@
       });
     });
 
+    let saving = false;
     async function saveEntry() {
       const text = textarea.value.trim();
-      if (!text) return;
-      const title = text.length > 80 ? text.slice(0, 80) + '…' : text;
-      // I tag restano nel testo (come su Twitter/Notion): li estraiamo solo
-      // per popolare il campo "tags" gia' usato altrove per filtrare/raggruppare.
-      const tags = [...new Set((text.match(/#([a-zA-Z0-9_-]+)/g) || []).map((t) => t.slice(1)))];
-      const idea = await api('/ideas', { method: 'POST', body: JSON.stringify({ title, body: text, tags }) });
-      if (selectedDossier) {
-        await api(`/dossiers/${selectedDossier.id}/links`, { method: 'POST', body: JSON.stringify({ item_type: 'idea', item_id: idea.id }) });
+      if (!text || saving) return;
+      saving = true;
+      const saveBtn = composer.querySelector('#flusso-save');
+      saveBtn.disabled = true;
+      try {
+        const title = text.length > 80 ? text.slice(0, 80) + '…' : text;
+        // I tag restano nel testo (come su Twitter/Notion): li estraiamo solo
+        // per popolare il campo "tags" gia' usato altrove per filtrare/raggruppare.
+        const tags = [...new Set((text.match(/#([a-zA-Z0-9_-]+)/g) || []).map((t) => t.slice(1)))];
+        const idea = await api('/ideas', { method: 'POST', body: JSON.stringify({ title, body: text, tags }) });
+        if (selectedDossier) {
+          await api(`/dossiers/${selectedDossier.id}/links`, { method: 'POST', body: JSON.stringify({ item_type: 'idea', item_id: idea.id }) });
+        }
+        toast('Aggiunto al flusso');
+        render('flusso', opts);
+      } finally {
+        saving = false;
+        saveBtn.disabled = false;
       }
-      toast('Aggiunto al flusso');
-      render('flusso', opts);
     }
     composer.querySelector('#flusso-save').addEventListener('click', saveEntry);
     main.appendChild(composer);
@@ -967,12 +1002,14 @@
     } else {
       const list = el('<div class="reminder-list"></div>');
       reminders.forEach((r) => {
-        list.appendChild(el(`
-          <div class="reminder-item">
+        const row = el(`
+          <button type="button" class="reminder-item reminder-item-link">
             <span>${esc(r.label)} <span class="card-sub">(${r.type === 'account' ? 'account' : 'documento'})</span></span>
             <span class="reminder-date">${fmtDate(r.date)}</span>
-          </div>
-        `));
+          </button>
+        `);
+        row.addEventListener('click', () => render(TYPE_TO_VIEW[r.type], { highlight: r.id }));
+        list.appendChild(row);
       });
       remindersBlock.appendChild(list);
     }
@@ -980,12 +1017,14 @@
 
     const statsBlock = el('<div class="section-block"><h3>Panoramica</h3></div>');
     const stats = [
-      ['Idee', ideas.length], ['Progetti', projects.length], ['Voci vault', vault.length],
-      ['Account', accounts.length], ['Documenti', documents.length],
+      ['Idee', 'ideas', ideas.length], ['Progetti', 'projects', projects.length], ['Voci vault', 'vault', vault.length],
+      ['Account', 'accounts', accounts.length], ['Documenti', 'drive', documents.length],
     ];
     const statsList = el('<div class="reminder-list"></div>');
-    stats.forEach(([label, count]) => {
-      statsList.appendChild(el(`<div class="reminder-item"><span>${label}</span><span class="reminder-date">${count}</span></div>`));
+    stats.forEach(([label, view, count]) => {
+      const row = el(`<button type="button" class="reminder-item reminder-item-link"><span>${label}</span><span class="reminder-date">${count}</span></button>`);
+      row.addEventListener('click', () => render(view));
+      statsList.appendChild(row);
     });
     statsBlock.appendChild(statsList);
     grid.appendChild(statsBlock);
@@ -1016,7 +1055,8 @@
     return form;
   }
 
-  views.ideas = async (root) => {
+  views.ideas = async (root, opts = {}) => {
+    const highlightId = opts.highlight ? String(opts.highlight) : null;
     const ideas = await api('/ideas');
     root.innerHTML = '';
     root.appendChild(el(`
@@ -1074,9 +1114,14 @@
         await api(`/ideas/${idea.id}`, { method: 'DELETE' });
         toast('Idea eliminata'); render('ideas');
       });
+      if (highlightId && String(idea.id) === highlightId) card.classList.add('card-highlight');
       grid.appendChild(card);
     });
     root.appendChild(grid);
+    if (highlightId) {
+      const target = grid.querySelector('.card-highlight');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   };
 
   // ==================================================================
@@ -1112,7 +1157,8 @@
     return form;
   }
 
-  views.projects = async (root) => {
+  views.projects = async (root, opts = {}) => {
+    const highlightId = opts.highlight ? String(opts.highlight) : null;
     const projects = await api('/projects');
     root.innerHTML = '';
     root.appendChild(el(`
@@ -1181,9 +1227,14 @@
         await api(`/projects/${p.id}`, { method: 'DELETE' });
         toast('Progetto eliminato'); render('projects');
       });
+      if (highlightId && String(p.id) === highlightId) card.classList.add('card-highlight');
       grid.appendChild(card);
     });
     root.appendChild(grid);
+    if (highlightId) {
+      const target = grid.querySelector('.card-highlight');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   };
 
   // ==================================================================
@@ -1214,7 +1265,8 @@
     return form;
   }
 
-  views.vault = async (root) => {
+  views.vault = async (root, opts = {}) => {
+    const highlightId = opts.highlight ? String(opts.highlight) : null;
     const entries = await api('/vault');
     root.innerHTML = '';
     root.appendChild(el(`
@@ -1309,8 +1361,13 @@
         await api(`/vault/${entry.id}`, { method: 'DELETE' });
         toast('Voce eliminata'); render('vault');
       });
+      if (highlightId && String(entry.id) === highlightId) row.classList.add('card-highlight');
       root.appendChild(row);
     });
+    if (highlightId) {
+      const target = root.querySelector('.card-highlight');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   };
 
   // ==================================================================
@@ -1342,7 +1399,8 @@
     return form;
   }
 
-  views.accounts = async (root) => {
+  views.accounts = async (root, opts = {}) => {
+    const highlightId = opts.highlight ? String(opts.highlight) : null;
     const accounts = await api('/accounts');
     root.innerHTML = '';
     root.appendChild(el(`
@@ -1401,15 +1459,21 @@
         await api(`/accounts/${a.id}`, { method: 'DELETE' });
         toast('Account eliminato'); render('accounts');
       });
+      if (highlightId && String(a.id) === highlightId) card.classList.add('card-highlight');
       grid.appendChild(card);
     });
     root.appendChild(grid);
+    if (highlightId) {
+      const target = grid.querySelector('.card-highlight');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   };
 
   // ==================================================================
   // DRIVE
   // ==================================================================
-  views.drive = async (root) => {
+  views.drive = async (root, opts = {}) => {
+    const highlightId = opts.highlight ? String(opts.highlight) : null;
     const docs = await api('/drive');
     root.innerHTML = '';
     root.appendChild(el(`
@@ -1472,8 +1536,13 @@
         await api(`/drive/${d.id}`, { method: 'DELETE' });
         toast('Documento eliminato'); render('drive');
       });
+      if (highlightId && String(d.id) === highlightId) row.classList.add('card-highlight');
       root.appendChild(row);
     });
+    if (highlightId) {
+      const target = root.querySelector('.card-highlight');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   };
 
   // ==================================================================
@@ -1534,9 +1603,14 @@
       }
       d.items.forEach((item) => {
         const chip = el(`
-          <span class="dossier-chip"><span class="chip-type">${esc(item.type)}</span>${esc(item.label)} <button title="Scollega">✕</button></span>
+          <span class="dossier-chip" role="button" tabindex="0" title="Apri"><span class="chip-type">${esc(item.type)}</span>${esc(item.label)} <button title="Scollega">✕</button></span>
         `);
-        chip.querySelector('button').addEventListener('click', async () => {
+        chip.addEventListener('click', () => {
+          const view = TYPE_TO_VIEW[item.type];
+          if (view) render(view, { highlight: item.id });
+        });
+        chip.querySelector('button').addEventListener('click', async (e) => {
+          e.stopPropagation();
           await api(`/dossiers/${d.id}/links/${item.type}/${item.id}`, { method: 'DELETE' });
           toast('Elemento scollegato'); render('dossiers');
         });
@@ -1776,8 +1850,8 @@
     const help = el('<div class="section-block"><h3>Se perdi il telefono</h3></div>');
     help.appendChild(el(`
       <p class="card-sub">Usa uno dei codici di recupero al posto delle 6 cifre nella schermata di accesso.
-      Se non hai nemmeno quelli, dal computer dove gira DarkNest puoi disattivare la verifica con:</p>
-      <p><code class="cmd-line">docker compose exec darknest node server/disable-2fa.js</code></p>
+      Se non hai nemmeno quelli, dal computer dove gira Mindkeep puoi disattivare la verifica con:</p>
+      <p><code class="cmd-line">docker compose exec mindkeep node server/disable-2fa.js</code></p>
     `));
     root.appendChild(help);
   };
