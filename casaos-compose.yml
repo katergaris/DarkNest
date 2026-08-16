@@ -58,10 +58,10 @@ x-casaos:
   description:
     en_US: "Mindkeep is a self-hosted personal space for ideas, projects, an encrypted password vault, accounts and documents, linked together by dossiers. No data leaves your server. On first access it asks you to create your own username and password; no configuration required."
     it_IT: "Mindkeep e' uno spazio personale self-hosted per idee, progetti, un vault password cifrato, account e documenti, collegati tra loro dai fascicoli. Nessun dato lascia il tuo server. Al primo accesso chiede di creare username e password: nessuna configurazione richiesta."
-  icon: https://raw.githubusercontent.com/katergaris/DarkNest/main/public/icon.svg
-  thumbnail: https://raw.githubusercontent.com/katergaris/DarkNest/main/public/icon-512.png
+  icon: https://raw.githubusercontent.com/katergaris/MindKeep/main/public/icon.svg
+  thumbnail: https://raw.githubusercontent.com/katergaris/MindKeep/main/public/icon-512.png
   index: /
   port_map: "3000"
-  website: "https://github.com/katergaris/DarkNest"
-  repo: "https://github.com/katergaris/DarkNest"
-  support: "https://github.com/katergaris/DarkNest/issues"
+  website: "https://github.com/katergaris/MindKeep"
+  repo: "https://github.com/katergaris/MindKeep"
+  support: "https://github.com/katergaris/MindKeep/issues"

@@ -68,13 +68,12 @@ docker compose up -d --build
 **Da terminale** (SSH o l'app "Terminale" di CasaOS): CasaOS è basato su Debian con Docker già installato, quindi vale la stessa procedura descritta in "Avvio rapido":
 
 ```bash
-git clone https://github.com/katergaris/DarkNest.git
-cd DarkNest
+git clone https://github.com/katergaris/MindKeep.git
+cd MindKeep
 ./setup.sh
 ```
 
 > Se manca `git`, installalo prima con `sudo apt-get update && sudo apt-get install -y git`.
-> Il repository su GitHub si chiama ancora "DarkNest" (rinominarlo è un passo separato): la cartella creata da `git clone` avrà quindi questo nome finché non verrà rinominato.
 
 ## Dati e persistenza
 
