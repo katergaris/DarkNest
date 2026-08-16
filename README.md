@@ -1,4 +1,4 @@
-# DarkNest
+# Mindkeep
 
 Spazio personale self-hosted per idee, progetti, password, account e documenti — con **fascicoli** che li collegano tra loro. Gira interamente sul tuo computer o server, dentro Docker: nessun dato lascia la tua macchina.
 
@@ -45,7 +45,7 @@ Lo script controlla che Docker sia installato e avviato, crea automaticamente il
 
 ### Avvio manuale (alternativa allo script)
 
-`.env` è **facoltativo**: se non lo crei, DarkNest genera da solo `SESSION_SECRET` ed `ENCRYPTION_KEY` al primo avvio e li salva in `data/.secrets.env` (sopravvivono a riavvii e rebuild, esattamente come il database). Quindi basta:
+`.env` è **facoltativo**: se non lo crei, Mindkeep genera da solo `SESSION_SECRET` ed `ENCRYPTION_KEY` al primo avvio e li salva in `data/.secrets.env` (sopravvivono a riavvii e rebuild, esattamente come il database). Quindi basta:
 
 ```bash
 docker compose up -d --build
@@ -63,6 +63,8 @@ docker compose up -d --build
 
 **Senza terminale** (più rapida): dal pannello CasaOS apri **App Store** → icona **"Installa un'app personalizzata"** → scheda **Docker Compose** → incolla il contenuto di [`casaos-compose.yml`](casaos-compose.yml) → **Installa**. CasaOS scarica l'immagine già pronta (nessuna compilazione sul NAS) e crea da solo le cartelle dati sotto `/DATA/AppData/`. Al primo accesso ti verrà chiesto di creare username e password, esattamente come nell'avvio rapido.
 
+> CasaOS non legge nome e icona dai file installati in questo modo (li assegna solo alle app del suo catalogo ufficiale): l'app comparirà con un nome generato a caso e un'icona generica. Puoi correggerli a mano dalla card dell'app appena installata, nelle sue impostazioni.
+
 **Da terminale** (SSH o l'app "Terminale" di CasaOS): CasaOS è basato su Debian con Docker già installato, quindi vale la stessa procedura descritta in "Avvio rapido":
 
 ```bash
@@ -72,14 +74,17 @@ cd DarkNest
 ```
 
 > Se manca `git`, installalo prima con `sudo apt-get update && sudo apt-get install -y git`.
+> Il repository su GitHub si chiama ancora "DarkNest" (rinominarlo è un passo separato): la cartella creata da `git clone` avrà quindi questo nome finché non verrà rinominato.
 
 ## Dati e persistenza
 
-- `./data/darknest.db` — database SQLite (idee, progetti, metadati vault/account/documenti/fascicoli)
+- `./data/mindkeep.db` — database SQLite (idee, progetti, metadati vault/account/documenti/fascicoli)
 - `./data/.secrets.env` — **solo se non hai creato un `.env` tu stesso**: `SESSION_SECRET` ed `ENCRYPTION_KEY` generati automaticamente al primo avvio
 - `./uploads/` — file caricati nel Drive
 
 Entrambe le cartelle sono montate come volumi Docker: i dati sopravvivono a riavvii e rebuild del container. Fanne comunque un backup periodico (vedi sotto) e **non cancellare mai `./data`** (ne' `.env`, se lo hai creato tu) — è lì che si trova la chiave con cui sono cifrate le password nel vault.
+
+**Salvare gli allegati altrove (es. un HDD esterno):** di default `./uploads` sta nella stessa cartella del progetto. Per usare un disco diverso, imposta `UPLOADS_DIR=/percorso/del/tuo/disco` nel `.env` e riavvia (`docker compose up -d`) — non serve toccare `docker-compose.yml`. Su CasaOS (installazione da "App personalizzata"), lo stesso si fa dal selettore di percorso che CasaOS mostra per ogni volume durante l'installazione: puoi puntarlo direttamente a un disco esterno collegato al NAS.
 
 ## Durata dell'accesso
 
@@ -89,10 +94,10 @@ Se preferisci che l'accesso scada, imposta `SESSION_DAYS` nel file `.env` con il
 
 ```bash
 SESSION_DAYS=0    # non scade mai (predefinito)
-SESSION_DAYS=7    # scade dopo 7 giorni in cui non apri mai DarkNest
+SESSION_DAYS=7    # scade dopo 7 giorni in cui non apri mai Mindkeep
 ```
 
-Il conteggio riparte a ogni utilizzo: con `SESSION_DAYS=7`, se apri DarkNest almeno una volta a settimana non ti verrà mai richiesta la password. All'avvio il container scrive nei log quale impostazione è attiva.
+Il conteggio riparte a ogni utilizzo: con `SESSION_DAYS=7`, se apri Mindkeep almeno una volta a settimana non ti verrà mai richiesta la password. All'avvio il container scrive nei log quale impostazione è attiva.
 
 > Con `SESSION_DAYS=0` chiunque usi quel browser entra senza password. Se il computer è condiviso, imposta un numero di giorni oppure ricordati di premere "Esci".
 
@@ -100,22 +105,22 @@ Il conteggio riparte a ogni utilizzo: con `SESSION_DAYS=7`, se apri DarkNest alm
 
 L'interfaccia si adatta agli schermi piccoli: al posto del menu laterale compare una **barra in basso** con Dashboard, Idee, Vault e Drive, mentre "Altro" apre un elenco con tutte le sezioni più "Esporta backup" ed "Esci". La ricerca sta dietro l'icona della lente e si apre al tocco.
 
-Puoi anche **aggiungerlo alla schermata home** e usarlo come un'app, senza barra del browser: dal telefono apri l'indirizzo di DarkNest e scegli "Aggiungi a schermata Home" (Safari) o "Installa app" / "Aggiungi a schermata Home" (Chrome). Serve che il telefono raggiunga il server: stessa rete di casa, oppure una VPN.
+Puoi anche **aggiungerlo alla schermata home** e usarlo come un'app, senza barra del browser: dal telefono apri l'indirizzo di Mindkeep e scegli "Aggiungi a schermata Home" (Safari) o "Installa app" / "Aggiungi a schermata Home" (Chrome). Serve che il telefono raggiunga il server: stessa rete di casa, oppure una VPN.
 
 ## Verifica in due passaggi (Google Authenticator)
 
 Facoltativa, si attiva da **Sicurezza** nel menu laterale. Una volta attiva, per entrare servono la password *e* un codice a 6 cifre generato dal telefono.
 
-1. Premi "Attiva con QR": DarkNest mostra un codice QR.
+1. Premi "Attiva con QR": Mindkeep mostra un codice QR.
 2. Apri **Google Authenticator** (vanno bene anche Aegis, 1Password, Authy, Bitwarden: è lo standard TOTP, non un meccanismo proprietario di Google) e inquadralo. Se la fotocamera non collabora, nell'app scegli "Inserisci chiave di configurazione" e digita il segreto scritto sotto al QR.
 3. Scrivi il codice a 6 cifre che compare nell'app per confermare, e **salva gli 8 codici di recupero** che ti vengono mostrati: sono l'unica via di rientro se perdi il telefono, si vedono una volta sola e ognuno funziona una volta sola.
 
 Il QR viene disegnato dal tuo server e i codici sono calcolati dall'ora corrente: **non serve connessione a internet** e nessun dato viene inviato a Google o a chiunque altro.
 
-**Se perdi il telefono:** scrivi uno dei codici di recupero al posto delle 6 cifre nella schermata di accesso. Se hai perso anche quelli, dal computer dove gira DarkNest:
+**Se perdi il telefono:** scrivi uno dei codici di recupero al posto delle 6 cifre nella schermata di accesso. Se hai perso anche quelli, dal computer dove gira Mindkeep:
 
 ```bash
-docker compose exec darknest node server/disable-2fa.js
+docker compose exec mindkeep node server/disable-2fa.js
 ```
 
 > La verifica in due passaggi protegge l'*accesso all'app*, non i dati sul disco: chi ha in mano il file `.env` e il database può comunque decifrare il vault. Serve contro chi indovina o ruba la password, non contro chi ha accesso fisico al server.
@@ -169,13 +174,13 @@ rm -rf data uploads   # attenzione: cancella tutti i dati salvati
 - Le password del vault sono cifrate con AES-256-GCM; la chiave deriva dalla `ENCRYPTION_KEY` che imposti tu (o che lo script genera per te) e non viene mai salvata nel database.
 - L'accesso all'app è protetto da un singolo utente (username + password, hash bcrypt) con sessione via cookie, e facoltativamente da una verifica in due passaggi con app di autenticazione (TOTP).
 - Dopo 10 tentativi di accesso falliti dallo stesso indirizzo, il login si blocca per 15 minuti.
-- Questo è uno strumento pensato per uso personale su una rete che controlli (rete domestica, VPN, NAS). Non ha avuto un audit di sicurezza professionale: per password particolarmente critiche, valuta di affiancare uno strumento dedicato e verificato come Vaultwarden, usando DarkNest per il resto.
-- Se esponi DarkNest su internet, mettilo dietro HTTPS (es. reverse proxy con Caddy/Traefik/Nginx) e considera un livello aggiuntivo di autenticazione (es. VPN).
+- Questo è uno strumento pensato per uso personale su una rete che controlli (rete domestica, VPN, NAS). Non ha avuto un audit di sicurezza professionale: per password particolarmente critiche, valuta di affiancare uno strumento dedicato e verificato come Vaultwarden, usando Mindkeep per il resto.
+- Se esponi Mindkeep su internet, mettilo dietro HTTPS (es. reverse proxy con Caddy/Traefik/Nginx) e considera un livello aggiuntivo di autenticazione (es. VPN).
 
 ## Struttura del progetto
 
 ```
-darknest/
+mindkeep/
 ├── setup.sh / setup.ps1   # installazione guidata (Linux-macOS / Windows)
 ├── docker-compose.yml
 ├── Dockerfile

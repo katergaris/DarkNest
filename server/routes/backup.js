@@ -10,7 +10,7 @@ const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
 
 router.get('/', async (req, res, next) => {
-  // Il database gira in modalita' WAL: copiare direttamente darknest.db
+  // Il database gira in modalita' WAL: copiare direttamente mindkeep.db
   // avrebbe incluso uno snapshot incompleto (le scritture recenti vivono nel
   // file -wal finche' non viene fatto il checkpoint). db.backup() produce
   // invece una copia coerente anche con il server in funzione.
@@ -29,7 +29,7 @@ router.get('/', async (req, res, next) => {
   };
 
   const stamp = new Date().toISOString().slice(0, 10);
-  res.attachment(`darknest-backup-${stamp}.zip`);
+  res.attachment(`mindkeep-backup-${stamp}.zip`);
 
   const archive = archiver('zip', { zlib: { level: 9 } });
   archive.on('error', (err) => {
@@ -44,7 +44,7 @@ router.get('/', async (req, res, next) => {
   archive.on('end', cleanup);
 
   archive.pipe(res);
-  archive.file(snapshot, { name: 'darknest.db' });
+  archive.file(snapshot, { name: 'mindkeep.db' });
   if (fs.existsSync(UPLOAD_DIR)) archive.directory(UPLOAD_DIR, 'uploads');
   archive.finalize();
 });

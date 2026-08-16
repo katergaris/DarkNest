@@ -1,11 +1,11 @@
-# Script di installazione guidata per DarkNest (Windows PowerShell).
+# Script di installazione guidata per Mindkeep (Windows PowerShell).
 # Controlla i prerequisiti, prepara il file .env con segreti generati
 # automaticamente, avvia il container e attende che sia pronto.
 
 $ErrorActionPreference = "Stop"
 Set-Location -Path $PSScriptRoot
 
-Write-Host "== DarkNest — installazione =="
+Write-Host "== Mindkeep — installazione =="
 Write-Host ""
 
 # --- 1. Verifica Docker ---
@@ -116,12 +116,12 @@ $port = $candidatePort
 
 # --- 4. Avvia il container ---
 Write-Host ""
-Write-Host "Avvio DarkNest (la prima volta può richiedere qualche minuto)..."
+Write-Host "Avvio Mindkeep (la prima volta può richiedere qualche minuto)..."
 docker compose up -d --build
 
 # --- 5. Attende che sia pronto ---
 Write-Host ""
-Write-Host "Attendo che DarkNest risponda su http://localhost:$port ..."
+Write-Host "Attendo che Mindkeep risponda su http://localhost:$port ..."
 $ready = $false
 for ($i = 0; $i -lt 40; $i++) {
   try {
@@ -133,10 +133,10 @@ for ($i = 0; $i -lt 40; $i++) {
 
 if ($ready) {
   Write-Host ""
-  Write-Host "OK DarkNest è pronto: http://localhost:$port"
+  Write-Host "OK Mindkeep è pronto: http://localhost:$port"
   Write-Host "   Al primo accesso ti verrà chiesto di creare username e password."
 } else {
   Write-Host ""
-  Write-Host "DarkNest non ha ancora risposto. Controlla i log con:"
+  Write-Host "Mindkeep non ha ancora risposto. Controlla i log con:"
   Write-Host "  docker compose logs -f"
 }

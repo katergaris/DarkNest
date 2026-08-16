@@ -191,7 +191,7 @@ app.use((err, req, res, next) => {
 });
 
 const server = app.listen(PORT, () => {
-  console.log(`DarkNest in ascolto su http://localhost:${PORT}`);
+  console.log(`Mindkeep in ascolto su http://localhost:${PORT}`);
   console.log(
     SESSION_MAX_AGE >= NEVER_MS
       ? 'Accesso: nessuna scadenza automatica (imposta SESSION_DAYS nel file .env per cambiarla)'

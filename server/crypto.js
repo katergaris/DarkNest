@@ -3,13 +3,16 @@ const crypto = require('crypto');
 const RAW_KEY = process.env.ENCRYPTION_KEY;
 if (!RAW_KEY || RAW_KEY.length < 8) {
   console.error(
-    'ENCRYPTION_KEY mancante o troppo corta. Impostala nel file .env prima di avviare DarkNest.'
+    'ENCRYPTION_KEY mancante o troppo corta. Impostala nel file .env prima di avviare Mindkeep.'
   );
   process.exit(1);
 }
 
 // Sale fisso derivato dalla stessa passphrase: va bene perche' la chiave finale
 // dipende comunque da ENCRYPTION_KEY, che l'utente tiene segreta e non versiona.
+// NON cambiare questa stringa (nemmeno per il rebranding): e' parte della
+// derivazione della chiave di cifratura del vault. Cambiarla rende illeggibile
+// per sempre ogni voce del vault gia' salvata con la versione precedente.
 const SALT = crypto.createHash('sha256').update('darknest-vault-salt').digest();
 const KEY = crypto.scryptSync(RAW_KEY, SALT, 32);
 

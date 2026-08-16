@@ -1,8 +1,8 @@
-name: darknest
+name: mindkeep
 services:
-  darknest:
-    image: ghcr.io/katergaris/darknest:latest
-    container_name: darknest
+  mindkeep:
+    image: ghcr.io/katergaris/mindkeep:latest
+    container_name: mindkeep
     restart: unless-stopped
     ports:
       - target: 3000
@@ -28,8 +28,8 @@ services:
       ports:
         - container: "3000"
           description:
-            en_US: DarkNest web UI
-            it_IT: Interfaccia web di DarkNest
+            en_US: Mindkeep web UI
+            it_IT: Interfaccia web di Mindkeep
       volumes:
         - container: /app/data
           description:
@@ -41,23 +41,23 @@ services:
             it_IT: File caricati nel Drive
 
 x-casaos:
-  id: me.katergaris.darknest
+  id: me.katergaris.mindkeep
   architectures:
     - amd64
     - arm64
-  main: darknest
+  main: mindkeep
   author: katergaris
   developer: katergaris
   category: Productivity
   title:
-    en_US: DarkNest
-    it_IT: DarkNest
+    en_US: Mindkeep
+    it_IT: Mindkeep
   tagline:
     en_US: Self-hosted personal space for ideas, projects, passwords and documents
     it_IT: Spazio personale self-hosted per idee, progetti, password e documenti
   description:
-    en_US: "DarkNest is a self-hosted personal space for ideas, projects, an encrypted password vault, accounts and documents, linked together by dossiers. No data leaves your server. On first access it asks you to create your own username and password; no configuration required."
-    it_IT: "DarkNest e' uno spazio personale self-hosted per idee, progetti, un vault password cifrato, account e documenti, collegati tra loro dai fascicoli. Nessun dato lascia il tuo server. Al primo accesso chiede di creare username e password: nessuna configurazione richiesta."
+    en_US: "Mindkeep is a self-hosted personal space for ideas, projects, an encrypted password vault, accounts and documents, linked together by dossiers. No data leaves your server. On first access it asks you to create your own username and password; no configuration required."
+    it_IT: "Mindkeep e' uno spazio personale self-hosted per idee, progetti, un vault password cifrato, account e documenti, collegati tra loro dai fascicoli. Nessun dato lascia il tuo server. Al primo accesso chiede di creare username e password: nessuna configurazione richiesta."
   icon: https://raw.githubusercontent.com/katergaris/DarkNest/main/public/icon.svg
   thumbnail: https://raw.githubusercontent.com/katergaris/DarkNest/main/public/icon-512.png
   index: /

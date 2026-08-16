@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Script di installazione guidata per DarkNest (Linux / macOS).
+# Script di installazione guidata per Mindkeep (Linux / macOS).
 # Controlla i prerequisiti, prepara il file .env con segreti generati
 # automaticamente, avvia il container e attende che sia pronto.
 
 set -euo pipefail
 cd "$(dirname "$0")"
 
-echo "== DarkNest — installazione =="
+echo "== Mindkeep — installazione =="
 echo ""
 
 # --- 1. Verifica Docker ---
@@ -124,12 +124,12 @@ PORT="$CANDIDATE_PORT"
 
 # --- 4. Avvia il container ---
 echo ""
-echo "Avvio DarkNest (la prima volta può richiedere qualche minuto per scaricare e compilare le dipendenze)..."
+echo "Avvio Mindkeep (la prima volta può richiedere qualche minuto per scaricare e compilare le dipendenze)..."
 $COMPOSE up -d --build
 
 # --- 5. Attende che sia pronto ---
 echo ""
-echo -n "Attendo che DarkNest risponda su http://localhost:${PORT} "
+echo -n "Attendo che Mindkeep risponda su http://localhost:${PORT} "
 READY=0
 for _ in $(seq 1 40); do
   if command -v curl >/dev/null 2>&1; then
@@ -144,11 +144,11 @@ echo ""
 
 if [ "$READY" = "1" ]; then
   echo ""
-  echo "✓ DarkNest è pronto: http://localhost:${PORT}"
+  echo "✓ Mindkeep è pronto: http://localhost:${PORT}"
   echo "  Al primo accesso ti verrà chiesto di creare username e password."
 else
   echo ""
-  echo "DarkNest non ha ancora risposto. Può essere solo questione di qualche secondo in più,"
+  echo "Mindkeep non ha ancora risposto. Può essere solo questione di qualche secondo in più,"
   echo "oppure qualcosa è andato storto. Controlla i log con:"
   echo "  $COMPOSE logs -f"
 fi
