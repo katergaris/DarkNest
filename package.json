@@ -1,10 +1,11 @@
 {
-  "name": "darknest",
+  "name": "mindkeep",
   "version": "1.0.0",
   "description": "Spazio personale self-hosted: idee, progetti, vault password, account, drive documenti e fascicoli collegati.",
   "main": "server/index.js",
   "scripts": {
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "test": "node --test"
   },
   "dependencies": {
     "archiver": "^7.0.1",
