@@ -248,15 +248,15 @@
   // piu' andare fuori sincrono.
   const SECTIONS = [
     { view: 'flusso', label: 'Flusso', tab: true },
-    { view: 'dashboard', label: 'Dashboard' },
+    { view: 'dashboard', label: 'Dashboard', tab: true },
     { view: 'ideas', label: 'Idee', tab: true },
-    { view: 'projects', label: 'Progetti' },
+    { view: 'projects', label: 'Progetti', tab: true },
     { view: 'vault', label: 'Vault', tab: true },
-    { view: 'accounts', label: 'Account' },
+    { view: 'accounts', label: 'Account', tab: true },
     { view: 'drive', label: 'Drive', tab: true },
-    { view: 'dossiers', label: 'Fascicoli' },
-    { view: 'trash', label: 'Cestino' },
-    { view: 'security', label: 'Sicurezza' },
+    { view: 'dossiers', label: 'Fascicoli', tab: true },
+    { view: 'trash', label: 'Cestino', tab: true },
+    { view: 'security', label: 'Sicurezza', tab: true },
   ];
 
   const nav = document.getElementById('nav');
@@ -293,10 +293,10 @@
   nav.appendChild(fascicoliGroup);
 
   // Conteggi per tipo mostrati sotto ogni fascicolo espanso.
-  const TREE_TYPE_LABELS = { document: 'documenti', idea: 'idee', project: 'progetti', account: 'account', vault: 'vault' };
+  const TREE_TYPE_LABELS = { document: 'documenti', idea: 'idee', project: 'progetti', account: 'account', vault: 'vault', reminder: 'scadenze' };
   // Sezione in cui vive ciascun tipo di elemento collegato a un fascicolo:
   // usata per aprire l'elemento cliccandolo, invece di poterlo solo scollegare.
-  const TYPE_TO_VIEW = { document: 'drive', idea: 'ideas', project: 'projects', account: 'accounts', vault: 'vault' };
+  const TYPE_TO_VIEW = { document: 'drive', idea: 'ideas', project: 'projects', account: 'accounts', vault: 'vault', reminder: 'flusso' };
   const expandedDossiers = new Set();
 
   async function refreshSidebarDossiers() {
@@ -446,12 +446,14 @@
     crumbbar.appendChild(path);
 
     if (view === 'flusso') {
+      const activeTab = opts.tab || 'flusso';
       const tabs = el('<div class="view-tabs"></div>');
       VIEW_TABS.forEach((t) => {
-        const btn = el(`<button type="button" class="view-tab ${t.key === 'flusso' ? 'active' : ''}">${esc(t.label)}</button>`);
+        const btn = el(`<button type="button" class="view-tab ${t.key === activeTab ? 'active' : ''}">${esc(t.label)}</button>`);
         btn.addEventListener('click', () => {
-          if (t.key === 'flusso') { render('flusso'); return; }
-          toast('Vista in arrivo');
+          if (t.key === 'orbita') { toast('Vista in arrivo'); return; }
+          if (t.key === activeTab) return;
+          render('flusso', { filter: opts.filter, tab: t.key === 'flusso' ? undefined : t.key });
         });
         tabs.appendChild(btn);
       });
@@ -560,15 +562,55 @@
     catch (e) { return ''; }
   }
 
-  const FLUSSO_API_TYPE = { idea: 'idea', progetto: 'project', account: 'account', documento: 'document' };
+  const FLUSSO_API_TYPE = { idea: 'idea', progetto: 'project', account: 'account', documento: 'document', scadenza: 'reminder' };
   // Percorso REST (e vista di destinazione) per ciascun tipo di elemento del flusso:
   // "documento" e' l'unico dove il nome del tipo non coincide col nome della sezione/rotta.
-  const FLUSSO_SECTION = { idea: 'ideas', progetto: 'projects', account: 'accounts', documento: 'drive' };
+  // "scadenza" non ha una sezione propria: vive solo nel flusso.
+  const FLUSSO_SECTION = { idea: 'ideas', progetto: 'projects', account: 'accounts', documento: 'drive', scadenza: 'reminders' };
+
+  function entryLabel(item) {
+    return item.title || item.service || item.display_name || item.original_name || item.label || '';
+  }
 
   // Evidenzia i "#tag" dentro un testo gia' passato da escTrim/esc (sicuro:
   // i caratteri delle entita' HTML non fanno parte di \w, quindi non si spezzano).
   function hashtagify(escapedStr) {
     return escapedStr.replace(/#([a-zA-Z0-9_-]+)/g, '<span class="entry-hashtag">#$1</span>');
+  }
+
+  // Riusata sia dalle card del flusso sia dalla Vista Tabella: apre il modo di
+  // modifica giusto per ciascun tipo di elemento (idea/scadenza inline, gli
+  // altri hanno la loro sezione dedicata).
+  function editFlussoEntry(item) {
+    if (item.kind === 'idea') {
+      const form = ideaModal(item);
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tags = parseTags(form);
+        await api(`/ideas/${item.id}`, { method: 'PUT', body: JSON.stringify({ title: form.title.value, body: form.body.value, tags }) });
+        closeModal(); toast('Idea aggiornata'); render('flusso');
+      });
+      form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+      openModal('Modifica idea', form);
+    } else if (item.kind === 'scadenza') {
+      const form = reminderModal(item);
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await api(`/reminders/${item.id}`, { method: 'PUT', body: JSON.stringify({ label: form.label.value, date: form.date.value, notes: form.notes.value }) });
+        closeModal(); toast('Scadenza aggiornata'); render('flusso');
+      });
+      form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+      openModal('Modifica scadenza', form);
+    } else {
+      // account/progetto/documento: la modifica completa vive gia' nella loro sezione.
+      render(FLUSSO_SECTION[item.kind]);
+    }
+  }
+
+  async function deleteFlussoEntry(item) {
+    if (!confirm('Spostare questo elemento nel cestino?')) return;
+    await api(`/${FLUSSO_SECTION[item.kind]}/${item.id}`, { method: 'DELETE' });
+    toast('Spostato nel cestino'); render('flusso');
   }
 
   function renderEntryCard(item, linkIndex) {
@@ -591,13 +633,14 @@
         body.appendChild(el(`<div class="tag-row" style="margin-top:9px">${item.tags.map((t) => `<span class="tag tag-neutral">${esc(t)}</span>`).join('')}</div>`));
       }
     } else if (item.kind === 'documento') {
-      body.appendChild(el(`<div class="entry-text">Caricato: ${escTrim(item.original_name, 160)}</div>`));
+      body.appendChild(el(`<div class="entry-text">Caricato: ${escTrim(item.display_name || item.original_name, 160)}</div>`));
       const ext = (item.original_name.includes('.') ? item.original_name.split('.').pop() : '').toUpperCase().slice(0, 4);
       body.appendChild(el(`
         <div class="entry-doc">
           <span class="entry-doc-ext">${esc(ext || 'FILE')}</span>
           <div style="flex:1;min-width:0">
-            <div class="entry-doc-name">${esc(item.original_name)}</div>
+            <div class="entry-doc-name">${esc(item.display_name || item.original_name)}</div>
+            ${item.display_name ? `<div class="entry-doc-original">${esc(item.original_name)}</div>` : ''}
             <div class="entry-doc-meta">${fmtSize(item.size)}${item.folder ? ' · ' + esc(item.folder) : ''}</div>
           </div>
         </div>
@@ -618,39 +661,23 @@
       }
     } else if (item.kind === 'account') {
       body.appendChild(el(`<div class="entry-text">${esc(item.service)}${item.renewal_date ? ' — rinnovo ' + fmtDate(item.renewal_date) : ''}</div>`));
+    } else if (item.kind === 'scadenza') {
+      body.appendChild(el(`<div class="entry-text">${esc(item.label)}${item.date ? ' — scade ' + fmtDate(item.date) : ''}</div>`));
+      if (item.notes) body.appendChild(el(`<div class="card-sub" style="margin-top:6px">${escTrim(item.notes, 160)}</div>`));
     }
     card.appendChild(body);
 
     const actions = el('<div class="entry-actions"></div>');
     const collega = el('<button type="button">Collega</button>');
-    collega.addEventListener('click', () => openLinkToDossierModal(apiType, item.id, item.title || item.service || item.original_name));
+    collega.addEventListener('click', () => openLinkToDossierModal(apiType, item.id, entryLabel(item)));
     actions.appendChild(collega);
 
     const modifica = el('<button type="button">Modifica</button>');
-    modifica.addEventListener('click', () => {
-      if (item.kind === 'idea') {
-        const form = ideaModal(item);
-        form.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const tags = parseTags(form);
-          await api(`/ideas/${item.id}`, { method: 'PUT', body: JSON.stringify({ title: form.title.value, body: form.body.value, tags }) });
-          closeModal(); toast('Idea aggiornata'); render('flusso');
-        });
-        form.querySelector('[data-cancel]').addEventListener('click', closeModal);
-        openModal('Modifica idea', form);
-      } else {
-        // account/progetto/documento: la modifica completa vive gia' nella loro sezione.
-        render(FLUSSO_SECTION[item.kind]);
-      }
-    });
+    modifica.addEventListener('click', () => editFlussoEntry(item));
     actions.appendChild(modifica);
 
     const elimina = el('<button type="button">Elimina</button>');
-    elimina.addEventListener('click', async () => {
-      if (!confirm('Spostare questo elemento nel cestino?')) return;
-      await api(`/${FLUSSO_SECTION[item.kind]}/${item.id}`, { method: 'DELETE' });
-      toast('Spostato nel cestino'); render('flusso');
-    });
+    elimina.addEventListener('click', () => deleteFlussoEntry(item));
     actions.appendChild(elimina);
 
     if (links.length) {
@@ -662,10 +689,129 @@
     return card;
   }
 
+  function reminderModal(existing) {
+    const form = el(`
+      <form class="modal-body" style="padding:0">
+        <div class="form-row"><label>Cosa</label><input type="text" name="label" required /></div>
+        <div class="form-row"><label>Quando</label><input type="date" name="date" required /></div>
+        <div class="form-row"><label>Note</label><textarea name="notes" rows="3"></textarea></div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" data-cancel>Annulla</button>
+          <button type="submit" class="btn btn-primary">Salva</button>
+        </div>
+      </form>
+    `);
+    if (existing) {
+      form.label.value = existing.label;
+      form.date.value = existing.date ? existing.date.slice(0, 10) : '';
+      form.notes.value = existing.notes;
+    }
+    return form;
+  }
+
+  // ---- Vista Tabella: stessi elementi del flusso (stesso filtro attivo), come elenco ----
+  function renderFlussoTabella(root, entries, linkIndex) {
+    if (!entries.length) {
+      root.appendChild(el('<div class="empty-state">Nessun elemento da mostrare.</div>'));
+      return;
+    }
+    const wrap = el('<div class="table-scroll"></div>');
+    const table = el(`
+      <table class="data-table">
+        <thead><tr><th>Tipo</th><th>Testo</th><th>Quando</th><th>Fascicolo</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    `);
+    const tbody = table.querySelector('tbody');
+    entries.forEach((item) => {
+      const apiType = FLUSSO_API_TYPE[item.kind];
+      const links = linkIndex.get(`${apiType}:${item.id}`) || [];
+      const row = el(`
+        <tr>
+          <td class="dt-type">[${esc(item.kind)}]</td>
+          <td class="dt-label">${esc(entryLabel(item))}</td>
+          <td class="dt-date">${fmtTime(item.created_at)}</td>
+          <td class="dt-fascicolo">${links[0] ? esc(links[0].title) : '—'}</td>
+          <td class="dt-actions"><button type="button" data-del title="Elimina">✕</button></td>
+        </tr>
+      `);
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('[data-del]')) return;
+        editFlussoEntry(item);
+      });
+      row.querySelector('[data-del]').addEventListener('click', (e) => { e.stopPropagation(); deleteFlussoEntry(item); });
+      tbody.appendChild(row);
+    });
+    wrap.appendChild(table);
+    root.appendChild(wrap);
+  }
+
+  // ---- Vista Bacheca: i progetti in kanban, spostabili tra gli stati che hanno gia' ----
+  function renderFlussoBacheca(root, projects) {
+    if (!projects.length) {
+      root.appendChild(el('<div class="empty-state">Nessun progetto ancora.</div>'));
+      return;
+    }
+    const STATUSES = [
+      { key: 'da_fare', label: 'Da fare' },
+      { key: 'in_corso', label: 'In corso' },
+      { key: 'fatto', label: 'Fatto' },
+    ];
+    const board = el('<div class="board"></div>');
+    STATUSES.forEach((s, i) => {
+      const col = el(`
+        <div class="board-col">
+          <div class="board-col-head"><span>${esc(s.label)}</span><span class="board-col-count">${projects.filter((p) => p.status === s.key).length}</span></div>
+          <div class="board-col-body"></div>
+        </div>
+      `);
+      const body = col.querySelector('.board-col-body');
+      projects.filter((p) => p.status === s.key).forEach((p) => {
+        const { done, total } = checklistProgress(p.checklist);
+        const card = el(`
+          <div class="board-card">
+            <p class="board-card-title">${esc(p.title)}</p>
+            ${total ? `<p class="card-sub">${done}/${total} completati</p>` : ''}
+            <div class="board-card-actions">
+              <button type="button" data-prev ${i === 0 ? 'disabled' : ''} title="Sposta indietro">←</button>
+              <button type="button" data-edit title="Apri">Apri</button>
+              <button type="button" data-next ${i === STATUSES.length - 1 ? 'disabled' : ''} title="Sposta avanti">→</button>
+            </div>
+          </div>
+        `);
+        async function moveTo(newStatus) {
+          await api(`/projects/${p.id}`, { method: 'PUT', body: JSON.stringify({ status: newStatus }) });
+          render('flusso', { tab: 'bacheca' });
+        }
+        card.querySelector('[data-prev]').addEventListener('click', () => moveTo(STATUSES[i - 1].key));
+        card.querySelector('[data-next]').addEventListener('click', () => moveTo(STATUSES[i + 1].key));
+        card.querySelector('[data-edit]').addEventListener('click', () => {
+          const form = projectModal(p);
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const tags = parseTags(form);
+            const prevMap = new Map((p.checklist || []).map((c) => [c.text, c.done]));
+            const checklist = form.checklist.value.split('\n').map((l) => l.trim()).filter(Boolean).map((text) => ({ text, done: prevMap.get(text) || false }));
+            await api(`/projects/${p.id}`, { method: 'PUT', body: JSON.stringify({ title: form.title.value, description: form.description.value, status: form.status.value, checklist, tags }) });
+            closeModal(); toast('Progetto aggiornato'); render('flusso', { tab: 'bacheca' });
+          });
+          form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+          openModal('Modifica progetto', form);
+        });
+        body.appendChild(card);
+      });
+      board.appendChild(col);
+    });
+    root.appendChild(board);
+  }
+
   views.flusso = async (root, opts = {}) => {
-    const [ideas, projects, accounts, documents, dossiers, reminders] = await Promise.all([
+    // Oggi arriva qui solo per le scadenze (uniche col flusso come unica "casa"):
+    // gli altri tipi hanno una sezione propria e usano il loro highlight interno.
+    const highlightId = opts.highlight != null ? String(opts.highlight) : null;
+    const [ideas, projects, accounts, documents, dossiers, upcoming, allReminders] = await Promise.all([
       api('/ideas'), api('/projects'), api('/accounts'), api('/drive'),
-      api('/dossiers'), api('/search/reminders/upcoming?days=45'),
+      api('/dossiers'), api('/search/reminders/upcoming?days=45'), api('/reminders'),
     ]);
 
     // Mappa elemento -> fascicoli a cui e' collegato: alimenta sia il chip
@@ -684,6 +830,7 @@
       ...projects.map((x) => ({ kind: 'progetto', ...x })),
       ...accounts.map((x) => ({ kind: 'account', ...x })),
       ...documents.map((x) => ({ kind: 'documento', ...x })),
+      ...allReminders.map((x) => ({ kind: 'scadenza', ...x })),
     ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     // Sotto-filtri della sidebar (Flusso > oggi / questa settimana / senza fascicolo).
@@ -701,6 +848,9 @@
     root.innerHTML = '';
     root.appendChild(el('<div class="view-header"><h2>Flusso</h2></div>'));
 
+    if (opts.tab === 'tabella') { renderFlussoTabella(root, entries, linkIndex); return; }
+    if (opts.tab === 'bacheca') { renderFlussoBacheca(root, projects); return; }
+
     const layout = el('<div class="flusso-layout"></div>');
     const main = el('<div></div>');
     const rail = el('<aside class="right-rail"></aside>');
@@ -714,7 +864,7 @@
         <div class="composer-row">
           <button type="button" class="chip" data-insert="/idea">/idea</button>
           <button type="button" class="chip" data-insert="/doc">/doc</button>
-          <button type="button" class="chip" data-insert="/scadenza" title="In arrivo">/scadenza</button>
+          <button type="button" class="chip" data-insert="/scadenza">/scadenza</button>
           <button type="button" class="chip" data-insert="/progetto">/progetto</button>
           <button type="button" class="chip chip-fascicolo" data-insert="@">@fascicolo</button>
           <button type="button" class="chip" data-insert="#">#tag</button>
@@ -743,7 +893,7 @@
     const COMMANDS = [
       { token: '/idea', desc: 'nota veloce' },
       { token: '/doc', desc: 'carica documento' },
-      { token: '/scadenza', desc: 'in arrivo' },
+      { token: '/scadenza', desc: 'nuovo promemoria' },
       { token: '/progetto', desc: 'nuovo progetto' },
     ];
     let menuEl = null;
@@ -795,7 +945,17 @@
         return;
       }
       if (item.token === '/idea') return; // e' gia' il tipo di default
-      if (item.token === '/scadenza') { toast('In arrivo'); return; }
+      if (item.token === '/scadenza') {
+        const form = reminderModal();
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          await api('/reminders', { method: 'POST', body: JSON.stringify({ label: form.label.value, date: form.date.value, notes: form.notes.value }) });
+          closeModal(); toast('Scadenza salvata'); render('flusso', opts);
+        });
+        form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+        openModal('Nuova scadenza', form);
+        return;
+      }
       if (item.token === '/doc') {
         await render('drive');
         const btn = document.getElementById('new-doc');
@@ -923,17 +1083,25 @@
           main.appendChild(el(`<div class="day-label">${esc(label)}</div>`));
           lastLabel = label;
         }
-        main.appendChild(renderEntryCard(item, linkIndex));
+        const card = renderEntryCard(item, linkIndex);
+        // Solo le scadenze arrivano qui con un highlight (vedi TYPE_TO_VIEW):
+        // e' l'unico tipo di elemento del flusso senza una sezione propria.
+        if (highlightId && item.kind === 'scadenza' && String(item.id) === highlightId) card.classList.add('card-highlight');
+        main.appendChild(card);
       });
     }
     layout.appendChild(main);
+    if (highlightId) {
+      const target = main.querySelector('.card-highlight');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 
     // ---- right rail (statistiche sull'intero flusso, non sul sotto-filtro attivo) ----
     const deadlinesBlock = el('<div class="rail-block"><h6>Scadenze</h6></div>');
-    if (!reminders.length) {
+    if (!upcoming.length) {
       deadlinesBlock.appendChild(el('<p class="card-sub">Nessuna scadenza nei prossimi 45 giorni.</p>'));
     } else {
-      reminders.slice(0, 6).forEach((r) => {
+      upcoming.slice(0, 6).forEach((r) => {
         const days = Math.round((new Date(r.date) - new Date()) / 86400000);
         const cls = days < 0 ? 'overdue' : days <= 7 ? 'soon' : '';
         deadlinesBlock.appendChild(el(`
@@ -1004,7 +1172,7 @@
       reminders.forEach((r) => {
         const row = el(`
           <button type="button" class="reminder-item reminder-item-link">
-            <span>${esc(r.label)} <span class="card-sub">(${r.type === 'account' ? 'account' : 'documento'})</span></span>
+            <span>${esc(r.label)} <span class="card-sub">(${{ account: 'account', document: 'documento', reminder: 'scadenza' }[r.type] || r.type})</span></span>
             <span class="reminder-date">${fmtDate(r.date)}</span>
           </button>
         `);
@@ -1472,6 +1640,27 @@
   // ==================================================================
   // DRIVE
   // ==================================================================
+  function documentModal(existing) {
+    const form = el(`
+      <form class="modal-body" style="padding:0">
+        <div class="form-row"><label>Nome (opzionale)</label><input type="text" name="display_name" placeholder="Lascia vuoto per usare il nome del file" /></div>
+        <p class="card-sub" style="margin:-6px 0 0">File originale: ${esc(existing.original_name)}</p>
+        <div class="form-row"><label>Cartella</label><input type="text" name="folder" placeholder="es. Casa, Auto, Fiscale" /></div>
+        <div class="form-row"><label>Scadenza (opzionale)</label><input type="date" name="expiry_date" /></div>
+        <div class="form-row"><label>Tag (separati da virgola)</label><input type="text" name="tags" /></div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" data-cancel>Annulla</button>
+          <button type="submit" class="btn btn-primary">Salva</button>
+        </div>
+      </form>
+    `);
+    form.display_name.value = existing.display_name || '';
+    form.folder.value = existing.folder || '';
+    form.expiry_date.value = existing.expiry_date ? existing.expiry_date.slice(0, 10) : '';
+    form.tags.value = (existing.tags || []).join(', ');
+    return form;
+  }
+
   views.drive = async (root, opts = {}) => {
     const highlightId = opts.highlight ? String(opts.highlight) : null;
     const docs = await api('/drive');
@@ -1487,6 +1676,7 @@
       const form = el(`
         <form class="modal-body" style="padding:0">
           <div class="form-row"><label>File</label><input type="file" name="file" required /></div>
+          <div class="form-row"><label>Nome (opzionale)</label><input type="text" name="display_name" placeholder="Lascia vuoto per usare il nome del file" /></div>
           <div class="form-row"><label>Cartella</label><input type="text" name="folder" placeholder="es. Casa, Auto, Fiscale" /></div>
           <div class="form-row"><label>Scadenza (opzionale)</label><input type="date" name="expiry_date" /></div>
           <div class="form-row"><label>Tag (separati da virgola)</label><input type="text" name="tags" /></div>
@@ -1501,6 +1691,7 @@
         const tags = parseTags(form);
         const fd = new FormData();
         fd.append('file', form.file.files[0]);
+        fd.append('display_name', form.display_name.value);
         fd.append('folder', form.folder.value);
         fd.append('expiry_date', form.expiry_date.value || '');
         fd.append('tags', JSON.stringify(tags));
@@ -1520,17 +1711,30 @@
       const row = el(`
         <div class="doc-row row-card">
           <div>
-            <div class="doc-name">${esc(d.original_name)}</div>
+            <div class="doc-name">${esc(d.display_name || d.original_name)}</div>
+            ${d.display_name ? `<div class="doc-original">${esc(d.original_name)}</div>` : ''}
             <div class="doc-meta">${d.folder ? esc(d.folder) + ' · ' : ''}${fmtSize(d.size)}${d.expiry_date ? ' · scade ' + fmtDate(d.expiry_date) : ''}</div>
           </div>
           <span class="card-actions" style="padding:0">
             <a class="btn btn-sm" href="/api/drive/${d.id}/download">Scarica</a>
+            <button class="btn btn-sm" data-edit>Modifica</button>
             <button class="btn btn-sm" data-link>Fascicolo</button>
             <button class="btn btn-sm btn-danger" data-del>Elimina</button>
           </span>
         </div>
       `);
-      row.querySelector('[data-link]').addEventListener('click', () => openLinkToDossierModal('document', d.id, d.original_name));
+      row.querySelector('[data-edit]').addEventListener('click', () => {
+        const form = documentModal(d);
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const tags = parseTags(form);
+          await api(`/drive/${d.id}`, { method: 'PUT', body: JSON.stringify({ display_name: form.display_name.value, folder: form.folder.value, expiry_date: form.expiry_date.value || null, tags }) });
+          closeModal(); toast('Documento aggiornato'); render('drive');
+        });
+        form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+        openModal('Modifica documento', form);
+      });
+      row.querySelector('[data-link]').addEventListener('click', () => openLinkToDossierModal('document', d.id, d.display_name || d.original_name));
       row.querySelector('[data-del]').addEventListener('click', async () => {
         if (!confirm('Spostare questo documento nel cestino?')) return;
         await api(`/drive/${d.id}`, { method: 'DELETE' });
@@ -1603,7 +1807,7 @@
       }
       d.items.forEach((item) => {
         const chip = el(`
-          <span class="dossier-chip" role="button" tabindex="0" title="Apri"><span class="chip-type">${esc(item.type)}</span>${esc(item.label)} <button title="Scollega">✕</button></span>
+          <span class="dossier-chip" role="button" tabindex="0" title="Apri"><span class="chip-type">${esc(item.type)}</span><span class="chip-label">${esc(item.label)}</span><button title="Scollega">✕</button></span>
         `);
         chip.addEventListener('click', () => {
           const view = TYPE_TO_VIEW[item.type];
