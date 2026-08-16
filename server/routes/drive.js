@@ -32,7 +32,7 @@ router.get('/', (req, res) => {
 
 router.post('/', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nessun file caricato' });
-  const { folder = '', tags = '[]', expiry_date = null } = req.body;
+  const { folder = '', tags = '[]', expiry_date = null, display_name = '' } = req.body;
   let parsedTags = [];
   try {
     parsedTags = JSON.parse(tags);
@@ -41,9 +41,9 @@ router.post('/', upload.single('file'), (req, res) => {
   }
   const info = db
     .prepare(
-      'INSERT INTO documents (original_name, stored_name, folder, mime, size, expiry_date, tags) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO documents (original_name, stored_name, folder, mime, size, expiry_date, tags, display_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     )
-    .run(req.file.originalname, req.file.filename, folder, req.file.mimetype, req.file.size, expiry_date || null, JSON.stringify(parsedTags));
+    .run(req.file.originalname, req.file.filename, folder, req.file.mimetype, req.file.size, expiry_date || null, JSON.stringify(parsedTags), display_name.trim() || null);
   res.status(201).json(serialize(db.prepare('SELECT * FROM documents WHERE id = ?').get(info.lastInsertRowid)));
 });
 
@@ -58,11 +58,13 @@ router.get('/:id/download', (req, res) => {
 router.put('/:id', (req, res) => {
   const existing = db.prepare('SELECT * FROM documents WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Documento non trovato' });
-  const { folder, tags, expiry_date } = req.body;
-  db.prepare('UPDATE documents SET folder = ?, tags = ?, expiry_date = ? WHERE id = ?').run(
+  const { folder, tags, expiry_date, display_name } = req.body;
+  db.prepare('UPDATE documents SET folder = ?, tags = ?, expiry_date = ?, display_name = ? WHERE id = ?').run(
     folder ?? existing.folder,
     JSON.stringify(tags ?? JSON.parse(existing.tags || '[]')),
     expiry_date !== undefined ? expiry_date : existing.expiry_date,
+    // Nome vuoto = torna a mostrare il nome originale del file.
+    display_name !== undefined ? (display_name.trim() || null) : existing.display_name,
     req.params.id
   );
   res.json(serialize(db.prepare('SELECT * FROM documents WHERE id = ?').get(req.params.id)));

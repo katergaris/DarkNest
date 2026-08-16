@@ -31,13 +31,17 @@ router.get('/', (req, res) => {
     .all(q, q, q, q)
     .forEach((r) => results.push({ type: 'account', id: r.id, label: r.service }));
 
-  db.prepare("SELECT id, original_name FROM documents WHERE deleted_at IS NULL AND (original_name LIKE ? ESCAPE '\\' OR folder LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\')")
-    .all(q, q, q)
-    .forEach((r) => results.push({ type: 'document', id: r.id, label: r.original_name }));
+  db.prepare("SELECT id, original_name, display_name FROM documents WHERE deleted_at IS NULL AND (original_name LIKE ? ESCAPE '\\' OR display_name LIKE ? ESCAPE '\\' OR folder LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\')")
+    .all(q, q, q, q)
+    .forEach((r) => results.push({ type: 'document', id: r.id, label: r.display_name || r.original_name }));
 
   db.prepare("SELECT id, title FROM dossiers WHERE deleted_at IS NULL AND (title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\')")
     .all(q, q)
     .forEach((r) => results.push({ type: 'dossier', id: r.id, label: r.title }));
+
+  db.prepare("SELECT id, label FROM reminders WHERE deleted_at IS NULL AND (label LIKE ? ESCAPE '\\' OR notes LIKE ? ESCAPE '\\')")
+    .all(q, q)
+    .forEach((r) => results.push({ type: 'reminder', id: r.id, label: r.label }));
 
   res.json(results);
 });
@@ -59,12 +63,19 @@ router.get('/reminders/upcoming', (req, res) => {
 
   const documents = db
     .prepare(
-      "SELECT id, original_name AS label, expiry_date AS date FROM documents WHERE deleted_at IS NULL AND expiry_date IS NOT NULL AND date(expiry_date) <= date('now', ?) ORDER BY expiry_date ASC"
+      "SELECT id, COALESCE(NULLIF(display_name, ''), original_name) AS label, expiry_date AS date FROM documents WHERE deleted_at IS NULL AND expiry_date IS NOT NULL AND date(expiry_date) <= date('now', ?) ORDER BY expiry_date ASC"
     )
     .all(limit)
     .map((r) => ({ ...r, type: 'document' }));
 
-  res.json([...accounts, ...documents].sort((a, b) => (a.date > b.date ? 1 : -1)));
+  const reminders = db
+    .prepare(
+      "SELECT id, label, date FROM reminders WHERE deleted_at IS NULL AND date(date) <= date('now', ?) ORDER BY date ASC"
+    )
+    .all(limit)
+    .map((r) => ({ ...r, type: 'reminder' }));
+
+  res.json([...accounts, ...documents, ...reminders].sort((a, b) => (a.date > b.date ? 1 : -1)));
 });
 
 module.exports = router;

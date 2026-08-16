@@ -7,7 +7,8 @@ const TABLES = {
   project: { table: 'projects', label: (r) => r.title },
   vault: { table: 'vault_entries', label: (r) => r.site },
   account: { table: 'accounts', label: (r) => r.service },
-  document: { table: 'documents', label: (r) => r.original_name },
+  document: { table: 'documents', label: (r) => r.display_name || r.original_name },
+  reminder: { table: 'reminders', label: (r) => r.label },
 };
 
 function serializeDossier(row) {

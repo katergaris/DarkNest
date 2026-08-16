@@ -154,6 +154,7 @@ app.use('/api/vault', auth.requireAuth, require('./routes/vault'));
 app.use('/api/accounts', auth.requireAuth, require('./routes/accounts'));
 app.use('/api/drive', auth.requireAuth, require('./routes/drive'));
 app.use('/api/dossiers', auth.requireAuth, require('./routes/dossiers'));
+app.use('/api/reminders', auth.requireAuth, require('./routes/reminders'));
 app.use('/api/search', auth.requireAuth, require('./routes/search'));
 app.use('/api/trash', auth.requireAuth, require('./routes/trash'));
 app.use('/api/backup', auth.requireAuth, require('./routes/backup'));
