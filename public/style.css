@@ -118,7 +118,7 @@ button { font-family: inherit; }
 }
 
 input, textarea, select {
-  background: var(--surface-2);
+  background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);

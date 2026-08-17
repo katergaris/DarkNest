@@ -792,10 +792,13 @@
       </table>
     `);
     const tbody = table.querySelector('tbody');
-    entries.forEach((item) => {
+    // Un <tr> costruito da solo con el() viene scartato dal parser HTML (fuori
+    // da un <table> non e' un elemento valido): le righe vanno scritte tutte
+    // insieme dentro il <tbody>, che e' gia' nel contesto giusto.
+    tbody.innerHTML = entries.map((item) => {
       const apiType = FLUSSO_API_TYPE[item.kind];
       const links = linkIndex.get(`${apiType}:${item.id}`) || [];
-      const row = el(`
+      return `
         <tr>
           <td class="dt-type">[${esc(item.kind)}]</td>
           <td class="dt-label">${esc(entryLabel(item))}</td>
@@ -803,13 +806,15 @@
           <td class="dt-fascicolo">${links[0] ? esc(links[0].title) : '—'}</td>
           <td class="dt-actions"><button type="button" data-del title="Elimina">✕</button></td>
         </tr>
-      `);
+      `;
+    }).join('');
+    [...tbody.children].forEach((row, i) => {
+      const item = entries[i];
       row.addEventListener('click', (e) => {
         if (e.target.closest('[data-del]')) return;
         editFlussoEntry(item);
       });
       row.querySelector('[data-del]').addEventListener('click', (e) => { e.stopPropagation(); deleteFlussoEntry(item); });
-      tbody.appendChild(row);
     });
     wrap.appendChild(table);
     root.appendChild(wrap);
