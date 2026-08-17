@@ -317,7 +317,7 @@
     { view: 'ideas', label: 'Idee', tab: true },
     { view: 'projects', label: 'Progetti', tab: true },
     { view: 'vault', label: 'Vault', tab: true },
-    { view: 'accounts', label: 'Account', tab: true },
+    { view: 'accounts', label: 'Abbonamenti', tab: true },
     { view: 'drive', label: 'Drive', tab: true },
     { view: 'dossiers', label: 'Fascicoli', tab: true },
     { view: 'trash', label: 'Cestino', tab: true },
@@ -1258,7 +1258,7 @@
     const statsBlock = el('<div class="section-block"><h3>Panoramica</h3></div>');
     const stats = [
       ['Idee', 'ideas', ideas.length], ['Progetti', 'projects', projects.length], ['Voci vault', 'vault', vault.length],
-      ['Account', 'accounts', accounts.length], ['Documenti', 'drive', documents.length],
+      ['Abbonamenti', 'accounts', accounts.length], ['Documenti', 'drive', documents.length],
     ];
     const statsList = el('<div class="reminder-list"></div>');
     stats.forEach(([label, view, count]) => {
@@ -1628,10 +1628,22 @@
   function accountModal(existing) {
     const form = el(`
       <form class="modal-body" style="padding:0">
-        <div class="form-row"><label>Servizio</label><input type="text" name="service" required /></div>
-        <div class="form-row"><label>Email</label><input type="text" name="email" /></div>
-        <div class="form-row"><label>Piano</label><input type="text" name="plan" /></div>
-        <div class="form-row"><label>Data di rinnovo</label><input type="date" name="renewal_date" /></div>
+        <div class="form-row"><label>Servizio / abbonamento</label><input type="text" name="service" required /></div>
+        <div class="form-row"><label>Tipo</label>
+          <select name="type">
+            <option value="digitale">Digitale</option>
+            <option value="cartaceo">Cartaceo / fisico</option>
+          </select>
+        </div>
+        <div data-type-fields="digitale">
+          <div class="form-row"><label>Email</label><input type="text" name="email" /></div>
+          <div class="form-row"><label>Piano</label><input type="text" name="plan" /></div>
+        </div>
+        <div data-type-fields="cartaceo">
+          <div class="form-row"><label>Luogo / negozio</label><input type="text" name="location" placeholder="es. edicola, negozio" /></div>
+          <div class="form-row"><label>Modalita' di pagamento</label><input type="text" name="payment_method" placeholder="es. contanti, bonifico" /></div>
+        </div>
+        <div class="form-row"><label>Data di rinnovo/scadenza</label><input type="date" name="renewal_date" /></div>
         <div class="form-row"><label>Note</label><textarea name="notes" rows="3"></textarea></div>
         <div class="form-row"><label>Tag (separati da virgola)</label><input type="text" name="tags" /></div>
         <div class="form-actions">
@@ -1640,14 +1652,24 @@
         </div>
       </form>
     `);
+    function syncTypeFields() {
+      form.querySelectorAll('[data-type-fields]').forEach((group) => {
+        group.classList.toggle('hidden', group.dataset.typeFields !== form.type.value);
+      });
+    }
+    form.type.addEventListener('change', syncTypeFields);
     if (existing) {
       form.service.value = existing.service;
+      form.type.value = existing.type || 'digitale';
       form.email.value = existing.email;
       form.plan.value = existing.plan;
+      form.location.value = existing.location || '';
+      form.payment_method.value = existing.payment_method || '';
       form.renewal_date.value = existing.renewal_date ? existing.renewal_date.slice(0, 10) : '';
       form.notes.value = existing.notes;
       form.tags.value = (existing.tags || []).join(', ');
     }
+    syncTypeFields();
     return form;
   }
 
@@ -1657,34 +1679,51 @@
     root.innerHTML = '';
     root.appendChild(el(`
       <div class="view-header">
-        <h2>Account</h2>
-        <div class="view-header-actions"><button class="btn btn-primary" id="new-account">+ Nuovo account</button></div>
+        <h2>Abbonamenti</h2>
+        <div class="view-header-actions"><button class="btn btn-primary" id="new-account">+ Nuovo abbonamento</button></div>
       </div>
     `));
+
+    function accountPayload(form) {
+      return {
+        service: form.service.value,
+        type: form.type.value,
+        email: form.email.value,
+        plan: form.plan.value,
+        location: form.location.value,
+        payment_method: form.payment_method.value,
+        renewal_date: form.renewal_date.value || null,
+        notes: form.notes.value,
+        tags: parseTags(form),
+      };
+    }
 
     root.querySelector('#new-account').addEventListener('click', () => {
       const form = accountModal();
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const tags = parseTags(form);
-        await api('/accounts', { method: 'POST', body: JSON.stringify({ service: form.service.value, email: form.email.value, plan: form.plan.value, renewal_date: form.renewal_date.value || null, notes: form.notes.value, tags }) });
-        closeModal(); toast('Account salvato'); render('accounts');
+        await api('/accounts', { method: 'POST', body: JSON.stringify(accountPayload(form)) });
+        closeModal(); toast('Abbonamento salvato'); render('accounts');
       });
       form.querySelector('[data-cancel]').addEventListener('click', closeModal);
-      openModal('Nuovo account', form);
+      openModal('Nuovo abbonamento', form);
     });
 
     if (!accounts.length) {
-      root.appendChild(el('<div class="empty-state">Nessun account ancora.</div>'));
+      root.appendChild(el('<div class="empty-state">Nessun abbonamento ancora.</div>'));
       return;
     }
 
     const grid = el('<div class="grid"></div>');
     accounts.forEach((a) => {
+      const isCartaceo = a.type === 'cartaceo';
       const card = el(`
         <div class="card">
+          <span class="tag tag-neutral" style="width:fit-content">${isCartaceo ? 'Cartaceo' : 'Digitale'}</span>
           <p class="card-title">${esc(a.service)}</p>
-          <p class="card-sub">${esc(a.email) || '—'} ${a.plan ? '· ' + esc(a.plan) : ''}</p>
+          ${isCartaceo
+            ? `<p class="card-sub">${esc(a.location) || '—'}${a.payment_method ? ' · ' + esc(a.payment_method) : ''}</p>`
+            : `<p class="card-sub">${esc(a.email) || '—'} ${a.plan ? '· ' + esc(a.plan) : ''}</p>`}
           ${a.renewal_date ? `<p class="card-sub">Rinnovo: ${fmtDate(a.renewal_date)}</p>` : ''}
           <div class="tag-row">${(a.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
           <div class="card-actions">
@@ -1698,18 +1737,17 @@
         const form = accountModal(a);
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
-          const tags = parseTags(form);
-          await api(`/accounts/${a.id}`, { method: 'PUT', body: JSON.stringify({ service: form.service.value, email: form.email.value, plan: form.plan.value, renewal_date: form.renewal_date.value || null, notes: form.notes.value, tags }) });
-          closeModal(); toast('Account aggiornato'); render('accounts');
+          await api(`/accounts/${a.id}`, { method: 'PUT', body: JSON.stringify(accountPayload(form)) });
+          closeModal(); toast('Abbonamento aggiornato'); render('accounts');
         });
         form.querySelector('[data-cancel]').addEventListener('click', closeModal);
-        openModal('Modifica account', form);
+        openModal('Modifica abbonamento', form);
       });
       card.querySelector('[data-link]').addEventListener('click', () => openLinkToDossierModal('account', a.id, a.service));
       card.querySelector('[data-del]').addEventListener('click', async () => {
-        if (!confirm('Spostare questo account nel cestino?')) return;
+        if (!confirm('Spostare questo abbonamento nel cestino?')) return;
         await api(`/accounts/${a.id}`, { method: 'DELETE' });
-        toast('Account eliminato'); render('accounts');
+        toast('Abbonamento eliminato'); render('accounts');
       });
       if (highlightId && String(a.id) === highlightId) card.classList.add('card-highlight');
       grid.appendChild(card);
@@ -1856,7 +1894,7 @@
         <h2>Fascicoli</h2>
         <div class="view-header-actions"><button class="btn btn-primary" id="new-dossier">+ Nuovo fascicolo</button></div>
       </div>
-      <p class="card-sub">Un fascicolo raccoglie insieme documenti, password, account e idee legati allo stesso tema. Collega gli elementi dai loro pulsanti "Fascicolo".</p>
+      <p class="card-sub">Un fascicolo raccoglie insieme documenti, password, abbonamenti e idee legati allo stesso tema. Collega gli elementi dai loro pulsanti "Fascicolo".</p>
     `));
 
     root.querySelector('#new-dossier').addEventListener('click', () => {
@@ -1933,7 +1971,7 @@
   // ==================================================================
   // CESTINO
   // ==================================================================
-  const TYPE_LABELS = { idea: 'Idea', project: 'Progetto', vault: 'Vault', account: 'Account', document: 'Documento', dossier: 'Fascicolo' };
+  const TYPE_LABELS = { idea: 'Idea', project: 'Progetto', vault: 'Vault', account: 'Abbonamento', document: 'Documento', dossier: 'Fascicolo' };
 
   views.trash = async (root) => {
     const items = await api('/trash');
