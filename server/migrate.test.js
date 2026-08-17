@@ -31,6 +31,11 @@ test('su un database vuoto crea tutte le tabelle ed esegue le migrazioni in ordi
 
   const docColumns = db.prepare('PRAGMA table_info(documents)').all().map((c) => c.name);
   assert.ok(docColumns.includes('display_name'));
+
+  const projectColumns = db.prepare('PRAGMA table_info(projects)').all().map((c) => c.name);
+  assert.ok(projectColumns.includes('deadline'));
+  assert.ok(projectColumns.includes('contacts'));
+  assert.ok(projectColumns.includes('budget'));
 });
 
 test('e\' idempotente: eseguirla piu\' volte non fallisce e non riapplica nulla', () => {
@@ -68,6 +73,17 @@ test('un database pre-esistente (schema gia\' presente, creato prima di questo s
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       deleted_at TEXT
     );
+    CREATE TABLE projects (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'da_fare',
+      checklist TEXT DEFAULT '[]',
+      tags TEXT DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      deleted_at TEXT
+    );
   `);
 
   // Se rieseguisse le migrazioni invece di adottarle, "ALTER TABLE ADD COLUMN
@@ -86,4 +102,7 @@ test('un database pre-esistente (schema gia\' presente, creato prima di questo s
 
   const docColumns = db.prepare('PRAGMA table_info(documents)').all().map((c) => c.name);
   assert.ok(docColumns.includes('display_name'), 'la migrazione del nome personalizzato non e\' stata eseguita sul database legacy');
+
+  const projectColumns = db.prepare('PRAGMA table_info(projects)').all().map((c) => c.name);
+  assert.ok(projectColumns.includes('deadline'), 'la migrazione dei campi progetto non e\' stata eseguita sul database legacy');
 });

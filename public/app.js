@@ -63,6 +63,32 @@
     return { done, total };
   }
 
+  // Formato di input rapido per il budget: una riga per voce, "etichetta, importo".
+  function parseBudgetLines(text) {
+    return text.split('\n').map((l) => l.trim()).filter(Boolean).map((line) => {
+      const idx = line.indexOf(',');
+      if (idx === -1) return { label: line, amount: 0 };
+      const label = line.slice(0, idx).trim();
+      const amount = parseFloat(line.slice(idx + 1).replace(',', '.').trim()) || 0;
+      return { label, amount };
+    });
+  }
+
+  function budgetTotal(list) {
+    return (list || []).reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+  }
+
+  function fmtMoney(n) {
+    return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n || 0);
+  }
+
+  // Riusata sia dalla vista Progetti sia dalla Vista Bacheca del Flusso.
+  function collectChecklist(form, previous) {
+    const lines = form.checklist.value.split('\n').map((l) => l.trim()).filter(Boolean);
+    const prevMap = new Map((previous || []).map((c) => [c.text, c.done]));
+    return lines.map((text) => ({ text, done: prevMap.get(text) || false }));
+  }
+
   function fmtSize(bytes) {
     if (!bytes) return '0 B';
     // Sotto il KB mostriamo i byte: prima qualsiasi file piccolo risultava "0 KB".
@@ -691,7 +717,7 @@
       if (previewable) docBox.addEventListener('click', () => openDocumentPreview(item));
       body.appendChild(docBox);
     } else if (item.kind === 'progetto') {
-      body.appendChild(el(`<div class="entry-text">${esc(item.title)}</div>`));
+      body.appendChild(el(`<div class="entry-text">${esc(item.title)}${item.deadline ? ' — scade ' + fmtDate(item.deadline) : ''}</div>`));
       const { done, total } = checklistProgress(item.checklist);
       if (total) {
         const pct = Math.round((done / total) * 100);
@@ -835,9 +861,10 @@
           form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const tags = parseTags(form);
-            const prevMap = new Map((p.checklist || []).map((c) => [c.text, c.done]));
-            const checklist = form.checklist.value.split('\n').map((l) => l.trim()).filter(Boolean).map((text) => ({ text, done: prevMap.get(text) || false }));
-            await api(`/projects/${p.id}`, { method: 'PUT', body: JSON.stringify({ title: form.title.value, description: form.description.value, status: form.status.value, checklist, tags }) });
+            const contacts = parseContacts(form);
+            const budget = parseBudgetLines(form.budget.value);
+            const checklist = collectChecklist(form, p.checklist);
+            await api(`/projects/${p.id}`, { method: 'PUT', body: JSON.stringify({ title: form.title.value, description: form.description.value, status: form.status.value, deadline: form.deadline.value || null, checklist, contacts, budget, tags }) });
             closeModal(); toast('Progetto aggiornato'); render('flusso', { tab: 'bacheca' });
           });
           form.querySelector('[data-cancel]').addEventListener('click', closeModal);
@@ -1217,7 +1244,7 @@
       reminders.forEach((r) => {
         const row = el(`
           <button type="button" class="reminder-item reminder-item-link">
-            <span>${esc(r.label)} <span class="card-sub">(${{ account: 'account', document: 'documento', reminder: 'scadenza' }[r.type] || r.type})</span></span>
+            <span>${esc(r.label)} <span class="card-sub">(${{ account: 'account', document: 'documento', reminder: 'scadenza', project: 'progetto' }[r.type] || r.type})</span></span>
             <span class="reminder-date">${fmtDate(r.date)}</span>
           </button>
         `);
@@ -1352,7 +1379,10 @@
             <option value="fatto">Fatto</option>
           </select>
         </div>
+        <div class="form-row"><label>Scadenza (opzionale)</label><input type="date" name="deadline" /></div>
         <div class="form-row"><label>Checklist (una voce per riga)</label><textarea name="checklist" rows="4" placeholder="es. Comprare i materiali"></textarea></div>
+        <div class="form-row"><label>Persone/contatti (separati da virgola)</label><input type="text" name="contacts" placeholder="es. Mario Rossi, elettricista" /></div>
+        <div class="form-row"><label>Budget (una voce per riga: etichetta, importo)</label><textarea name="budget" rows="3" placeholder="es. Materiali, 50"></textarea></div>
         <div class="form-row"><label>Tag (separati da virgola)</label><input type="text" name="tags" /></div>
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" data-cancel>Annulla</button>
@@ -1364,10 +1394,17 @@
       form.title.value = existing.title;
       form.description.value = existing.description;
       form.status.value = existing.status;
+      form.deadline.value = existing.deadline ? existing.deadline.slice(0, 10) : '';
       form.checklist.value = (existing.checklist || []).map((c) => c.text).join('\n');
+      form.contacts.value = (existing.contacts || []).join(', ');
+      form.budget.value = (existing.budget || []).map((b) => `${b.label}, ${b.amount}`).join('\n');
       form.tags.value = (existing.tags || []).join(', ');
     }
     return form;
+  }
+
+  function parseContacts(form) {
+    return form.contacts.value.split(',').map((c) => c.trim()).filter(Boolean);
   }
 
   views.projects = async (root, opts = {}) => {
@@ -1381,19 +1418,15 @@
       </div>
     `));
 
-    function collectChecklist(form, previous) {
-      const lines = form.checklist.value.split('\n').map((l) => l.trim()).filter(Boolean);
-      const prevMap = new Map((previous || []).map((c) => [c.text, c.done]));
-      return lines.map((text) => ({ text, done: prevMap.get(text) || false }));
-    }
-
     root.querySelector('#new-project').addEventListener('click', () => {
       const form = projectModal();
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const tags = parseTags(form);
+        const contacts = parseContacts(form);
+        const budget = parseBudgetLines(form.budget.value);
         const checklist = collectChecklist(form, []);
-        await api('/projects', { method: 'POST', body: JSON.stringify({ title: form.title.value, description: form.description.value, status: form.status.value, checklist, tags }) });
+        await api('/projects', { method: 'POST', body: JSON.stringify({ title: form.title.value, description: form.description.value, status: form.status.value, deadline: form.deadline.value || null, checklist, contacts, budget, tags }) });
         closeModal(); toast('Progetto creato'); render('projects');
       });
       form.querySelector('[data-cancel]').addEventListener('click', closeModal);
@@ -1408,12 +1441,16 @@
     const grid = el('<div class="grid"></div>');
     projects.forEach((p) => {
       const { done, total } = checklistProgress(p.checklist);
+      const total_budget = budgetTotal(p.budget);
       const card = el(`
         <div class="card">
           <span class="status-pill status-${p.status}">${p.status.replace('_', ' ')}</span>
           <p class="card-title">${esc(p.title)}</p>
           <p class="card-body">${escTrim(p.description, 160)}</p>
+          ${p.deadline ? `<p class="card-sub">Scadenza: ${fmtDate(p.deadline)}</p>` : ''}
           ${total ? `<p class="card-sub">Checklist: ${done}/${total} completati</p>` : ''}
+          ${(p.contacts || []).length ? `<p class="card-sub">Persone: ${esc(p.contacts.join(', '))}</p>` : ''}
+          ${total_budget ? `<p class="card-sub">Budget: ${fmtMoney(total_budget)}</p>` : ''}
           <div class="tag-row">${(p.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
           <div class="card-actions">
             <button class="btn btn-sm" data-edit>Modifica</button>
@@ -1427,8 +1464,10 @@
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
           const tags = parseTags(form);
+          const contacts = parseContacts(form);
+          const budget = parseBudgetLines(form.budget.value);
           const checklist = collectChecklist(form, p.checklist);
-          await api(`/projects/${p.id}`, { method: 'PUT', body: JSON.stringify({ title: form.title.value, description: form.description.value, status: form.status.value, checklist, tags }) });
+          await api(`/projects/${p.id}`, { method: 'PUT', body: JSON.stringify({ title: form.title.value, description: form.description.value, status: form.status.value, deadline: form.deadline.value || null, checklist, contacts, budget, tags }) });
           closeModal(); toast('Progetto aggiornato'); render('projects');
         });
         form.querySelector('[data-cancel]').addEventListener('click', closeModal);

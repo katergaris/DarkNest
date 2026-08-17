@@ -75,7 +75,14 @@ router.get('/reminders/upcoming', (req, res) => {
     .all(limit)
     .map((r) => ({ ...r, type: 'reminder' }));
 
-  res.json([...accounts, ...documents, ...reminders].sort((a, b) => (a.date > b.date ? 1 : -1)));
+  const projects = db
+    .prepare(
+      "SELECT id, title AS label, deadline AS date FROM projects WHERE deleted_at IS NULL AND deadline IS NOT NULL AND date(deadline) <= date('now', ?) ORDER BY deadline ASC"
+    )
+    .all(limit)
+    .map((r) => ({ ...r, type: 'project' }));
+
+  res.json([...accounts, ...documents, ...reminders, ...projects].sort((a, b) => (a.date > b.date ? 1 : -1)));
 });
 
 module.exports = router;
