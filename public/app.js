@@ -280,7 +280,6 @@
   // invece di un tratto astratto.
   const ICONS = {
     flusso:     ['................', '................', '...###..........', '...####.........', '...#####........', '...######.......', '...#######......', '...########.....', '...########.....', '...#######......', '...######.......', '...#####........', '...####.........', '...###..........', '................', '................'],
-    dashboard:  ['................', '.######..######.', '.######..######.', '.######..######.', '.######..######.', '.######..######.', '.######..######.', '................', '................', '.######..######.', '.######..######.', '.######..######.', '.######..######.', '.######..######.', '.######..######.', '................'],
     ideas:      ['................', '................', '......####......', '.....######.....', '....########....', '....########....', '....########....', '....########....', '.....######.....', '......####......', '......####......', '................', '.....######.....', '................', '......####......', '................'],
     projects:   ['................', '................', '.####...........', '.####..########.', '.####..########.', '.####...........', '................', '.####...........', '.####..########.', '.####..########.', '.####...........', '................', '.####...........', '.####..########.', '.####..########.', '.####...........'],
     vault:      ['................', '.......###......', '......#####.....', '.....#######....', '....###...###...', '....###...###...', '....###...###...', '....#########...', '...###########..', '...###########..', '...###########..', '...###########..', '...###########..', '...###########..', '...###########..', '................'],
@@ -313,7 +312,6 @@
   // piu' andare fuori sincrono.
   const SECTIONS = [
     { view: 'flusso', label: 'Flusso', tab: true },
-    { view: 'dashboard', label: 'Dashboard', tab: true },
     { view: 'ideas', label: 'Idee', tab: true },
     { view: 'projects', label: 'Progetti', tab: true },
     { view: 'vault', label: 'Vault', tab: true },
@@ -361,7 +359,7 @@
   const TREE_TYPE_LABELS = { document: 'documenti', idea: 'idee', project: 'progetti', account: 'account', vault: 'vault', reminder: 'scadenze' };
   // Sezione in cui vive ciascun tipo di elemento collegato a un fascicolo:
   // usata per aprire l'elemento cliccandolo, invece di poterlo solo scollegare.
-  const TYPE_TO_VIEW = { document: 'drive', idea: 'ideas', project: 'projects', account: 'accounts', vault: 'vault', reminder: 'flusso' };
+  const TYPE_TO_VIEW = { document: 'drive', idea: 'ideas', project: 'projects', account: 'accounts', vault: 'vault', reminder: 'flusso', dossier: 'dossiers' };
   const expandedDossiers = new Set();
 
   async function refreshSidebarDossiers() {
@@ -881,9 +879,9 @@
     // Oggi arriva qui solo per le scadenze (uniche col flusso come unica "casa"):
     // gli altri tipi hanno una sezione propria e usano il loro highlight interno.
     const highlightId = opts.highlight != null ? String(opts.highlight) : null;
-    const [ideas, projects, accounts, documents, dossiers, upcoming, allReminders] = await Promise.all([
+    const [ideas, projects, accounts, documents, dossiers, upcoming, allReminders, vault] = await Promise.all([
       api('/ideas'), api('/projects'), api('/accounts'), api('/drive'),
-      api('/dossiers'), api('/search/reminders/upcoming?days=45'), api('/reminders'),
+      api('/dossiers'), api('/search/reminders/upcoming?days=45'), api('/reminders'), api('/vault'),
     ]);
 
     // Mappa elemento -> fascicoli a cui e' collegato: alimenta sia il chip
@@ -1176,12 +1174,14 @@
       upcoming.slice(0, 6).forEach((r) => {
         const days = Math.round((new Date(r.date) - new Date()) / 86400000);
         const cls = days < 0 ? 'overdue' : days <= 7 ? 'soon' : '';
-        deadlinesBlock.appendChild(el(`
-          <div class="rail-deadline">
+        const row = el(`
+          <button type="button" class="rail-deadline">
             <span class="rail-deadline-days ${cls}">${days < 0 ? days : '+' + days}</span>
             <span>${esc(r.label)}</span>
-          </div>
-        `));
+          </button>
+        `);
+        row.addEventListener('click', () => render(TYPE_TO_VIEW[r.type], { highlight: r.id }));
+        deadlinesBlock.appendChild(row);
       });
     }
     rail.appendChild(deadlinesBlock);
@@ -1215,61 +1215,21 @@
     `));
     rail.appendChild(weekBlock);
 
-    layout.appendChild(rail);
-    root.appendChild(layout);
-    textarea.focus();
-  };
-
-  // ==================================================================
-  // DASHBOARD
-  // ==================================================================
-  views.dashboard = async (root) => {
-    const [reminders, ideas, projects, vault, accounts, documents] = await Promise.all([
-      api('/search/reminders/upcoming?days=45'),
-      api('/ideas'), api('/projects'), api('/vault'), api('/accounts'), api('/drive'),
-    ]);
-    root.innerHTML = '';
-    root.appendChild(el(`
-      <div class="view-header"><h2>Dashboard</h2></div>
-      <div class="woven-divider"></div>
-    `));
-
-    const grid = el('<div class="dashboard-grid"></div>');
-
-    const remindersBlock = el('<div class="section-block"><h3>Scadenze in arrivo</h3></div>');
-    if (!reminders.length) {
-      remindersBlock.appendChild(el('<p class="card-sub">Nessuna scadenza nei prossimi 45 giorni.</p>'));
-    } else {
-      const list = el('<div class="reminder-list"></div>');
-      reminders.forEach((r) => {
-        const row = el(`
-          <button type="button" class="reminder-item reminder-item-link">
-            <span>${esc(r.label)} <span class="card-sub">(${{ account: 'account', document: 'documento', reminder: 'scadenza', project: 'progetto' }[r.type] || r.type})</span></span>
-            <span class="reminder-date">${fmtDate(r.date)}</span>
-          </button>
-        `);
-        row.addEventListener('click', () => render(TYPE_TO_VIEW[r.type], { highlight: r.id }));
-        list.appendChild(row);
-      });
-      remindersBlock.appendChild(list);
-    }
-    grid.appendChild(remindersBlock);
-
-    const statsBlock = el('<div class="section-block"><h3>Panoramica</h3></div>');
-    const stats = [
+    const overviewBlock = el('<div class="rail-block"><h6>Panoramica</h6></div>');
+    const overview = [
       ['Idee', 'ideas', ideas.length], ['Progetti', 'projects', projects.length], ['Voci vault', 'vault', vault.length],
       ['Abbonamenti', 'accounts', accounts.length], ['Documenti', 'drive', documents.length],
     ];
-    const statsList = el('<div class="reminder-list"></div>');
-    stats.forEach(([label, view, count]) => {
-      const row = el(`<button type="button" class="reminder-item reminder-item-link"><span>${label}</span><span class="reminder-date">${count}</span></button>`);
+    overview.forEach(([label, view, count]) => {
+      const row = el(`<button type="button" class="rail-dossier"><span class="rail-dossier-label">${esc(label)}</span><span class="rail-dossier-count">${count}</span></button>`);
       row.addEventListener('click', () => render(view));
-      statsList.appendChild(row);
+      overviewBlock.appendChild(row);
     });
-    statsBlock.appendChild(statsList);
-    grid.appendChild(statsBlock);
+    rail.appendChild(overviewBlock);
 
-    root.appendChild(grid);
+    layout.appendChild(rail);
+    root.appendChild(layout);
+    textarea.focus();
   };
 
   // ==================================================================
@@ -2241,8 +2201,7 @@
           item.addEventListener('click', () => {
             searchResults.classList.add('hidden');
             searchInput.value = '';
-            const viewMap = { idea: 'ideas', project: 'projects', vault: 'vault', account: 'accounts', document: 'drive', dossier: 'dossiers' };
-            render(viewMap[r.type] || 'dashboard');
+            render(TYPE_TO_VIEW[r.type] || 'flusso', { highlight: r.id });
           });
           searchResults.appendChild(item);
         });

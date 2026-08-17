@@ -4,13 +4,13 @@ Spazio personale self-hosted per idee, progetti, password, account e documenti �
 
 ## Cosa contiene
 
-- **Idee** — note libere con tag
-- **Progetti** — stato (da fare / in corso / fatto) e checklist
+- **Flusso** — un unico flusso per idee, scadenze, documenti e aggiornamenti ai progetti, con comandi rapidi (`/idea` `/doc` `/scadenza` `/progetto`), tag e collegamento ai fascicoli mentre scrivi; include anche una vista Tabella e una Bacheca (kanban progetti), oltre a scadenze e panoramica delle sezioni
+- **Idee** — note libere con tag e `#hashtag`
+- **Progetti** — stato (da fare / in corso / fatto), checklist, scadenza, persone/contatti e budget
 - **Vault password** — voci cifrate (AES-256-GCM), con **import da CSV**
-- **Account** — anagrafica servizi con data di rinnovo
-- **Drive** — upload documenti, organizzati in cartelle, con scadenza opzionale
-- **Fascicoli** — collegano insieme idee, progetti, voci del vault, account e documenti su uno stesso tema
-- **Dashboard** — scadenze in arrivo (account e documenti) e panoramica
+- **Abbonamenti** — account digitali o abbonamenti cartacei/fisici, con campi propri per ciascuno e data di rinnovo
+- **Drive** — upload documenti, organizzati in cartelle, con nome personalizzato, anteprima (immagini e PDF) e scadenza opzionale
+- **Fascicoli** — collegano insieme idee, progetti, voci del vault, abbonamenti, documenti e scadenze sullo stesso tema
 - **Ricerca globale** — cerca in tutte le sezioni insieme
 - **Cestino** — eliminazione soft con possibilità di ripristino
 - **Backup** — esporta un file .zip con database e documenti caricati
@@ -102,7 +102,7 @@ Il conteggio riparte a ogni utilizzo: con `SESSION_DAYS=7`, se apri Mindkeep alm
 
 ## Dal telefono
 
-L'interfaccia si adatta agli schermi piccoli: al posto del menu laterale compare una **barra in basso** con Dashboard, Idee, Vault e Drive, mentre "Altro" apre un elenco con tutte le sezioni più "Esporta backup" ed "Esci". La ricerca sta dietro l'icona della lente e si apre al tocco.
+L'interfaccia si adatta agli schermi piccoli: al posto del menu laterale compare una **barra in basso su due righe** con quasi tutte le sezioni, mentre "Altro" apre un elenco con tutte le sezioni più "Esporta backup" ed "Esci". La ricerca sta dietro l'icona della lente e si apre al tocco.
 
 Puoi anche **aggiungerlo alla schermata home** e usarlo come un'app, senza barra del browser: dal telefono apri l'indirizzo di Mindkeep e scegli "Aggiungi a schermata Home" (Safari) o "Installa app" / "Aggiungi a schermata Home" (Chrome). Serve che il telefono raggiunga il server: stessa rete di casa, oppure una VPN.
 
