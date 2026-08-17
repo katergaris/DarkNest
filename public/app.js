@@ -1904,38 +1904,59 @@
       return;
     }
 
+    // Elenco completo con dettaglio: si apre cliccando la card (o "Apri").
+    function openDossierDetail(d) {
+      const wrap = el('<div></div>');
+      if (!d.items.length) {
+        wrap.appendChild(el('<p class="card-sub">Nessun elemento collegato.</p>'));
+      } else {
+        d.items.forEach((item) => {
+          const row = el(`
+            <div class="trash-row row-card" style="cursor:pointer">
+              <span><span class="chip-type">${esc(item.type)}</span>&nbsp;${esc(item.label)}</span>
+              <button type="button" class="btn btn-sm btn-danger" title="Scollega">✕</button>
+            </div>
+          `);
+          row.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return;
+            const view = TYPE_TO_VIEW[item.type];
+            closeModal();
+            if (view) render(view, { highlight: item.id });
+          });
+          row.querySelector('button').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await api(`/dossiers/${d.id}/links/${item.type}/${item.id}`, { method: 'DELETE' });
+            toast('Elemento scollegato'); closeModal(); render('dossiers');
+          });
+          wrap.appendChild(row);
+        });
+      }
+      openModal(d.title, wrap);
+    }
+
     const grid = el('<div class="grid"></div>');
     dossiers.forEach((d) => {
+      const counts = {};
+      d.items.forEach((item) => { counts[item.type] = (counts[item.type] || 0) + 1; });
+      const summary = Object.entries(counts).map(([type, count]) => `${count} ${TREE_TYPE_LABELS[type] || type}`).join(' · ');
       const card = el(`
-        <div class="card">
+        <div class="card dossier-card" style="cursor:pointer">
           <p class="card-title">${esc(d.title)}</p>
           <p class="card-body">${esc(d.description)}</p>
-          <div class="dossier-items"></div>
+          <p class="card-sub">${summary ? esc(summary) : 'Nessun elemento collegato.'}</p>
           <div class="card-actions">
+            <button class="btn btn-sm" data-open>Apri</button>
             <button class="btn btn-sm btn-danger" data-del>Elimina fascicolo</button>
           </div>
         </div>
       `);
-      const itemsWrap = card.querySelector('.dossier-items');
-      if (!d.items.length) {
-        itemsWrap.appendChild(el('<span class="card-sub">Nessun elemento collegato.</span>'));
-      }
-      d.items.forEach((item) => {
-        const chip = el(`
-          <span class="dossier-chip" role="button" tabindex="0" title="Apri"><span class="chip-type">${esc(item.type)}</span><span class="chip-label">${esc(item.label)}</span><button title="Scollega">✕</button></span>
-        `);
-        chip.addEventListener('click', () => {
-          const view = TYPE_TO_VIEW[item.type];
-          if (view) render(view, { highlight: item.id });
-        });
-        chip.querySelector('button').addEventListener('click', async (e) => {
-          e.stopPropagation();
-          await api(`/dossiers/${d.id}/links/${item.type}/${item.id}`, { method: 'DELETE' });
-          toast('Elemento scollegato'); render('dossiers');
-        });
-        itemsWrap.appendChild(chip);
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        openDossierDetail(d);
       });
-      card.querySelector('[data-del]').addEventListener('click', async () => {
+      card.querySelector('[data-open]').addEventListener('click', () => openDossierDetail(d));
+      card.querySelector('[data-del]').addEventListener('click', async (e) => {
+        e.stopPropagation();
         if (!confirm('Spostare questo fascicolo nel cestino? Gli elementi collegati non verranno eliminati.')) return;
         await api(`/dossiers/${d.id}`, { method: 'DELETE' });
         toast('Fascicolo eliminato'); render('dossiers');
@@ -1947,6 +1968,8 @@
     if (highlightId) {
       const target = grid.querySelector('.card-highlight');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const match = dossiers.find((d) => String(d.id) === highlightId);
+      if (match) openDossierDetail(match);
     }
   };
 

@@ -635,23 +635,7 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 .doc-meta { color: var(--text-muted); font-size: 0.78rem; }
 
 /* ---------- Dossier ---------- */
-.dossier-items { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.dossier-chip {
-  background: var(--surface-2);
-  border: 1px solid var(--border-soft);
-  border-radius: 999px;
-  padding: 3px 10px 3px 12px;
-  font-size: 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  max-width: 100%;
-  min-width: 0;
-}
-.dossier-chip:hover { border-color: color-mix(in srgb, var(--accent) 40%, transparent); color: var(--accent-soft); }
-.dossier-chip .chip-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dossier-chip button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.75rem; padding: 0; flex: none; }
+.dossier-card:hover { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 .chip-type { color: var(--accent-soft); text-transform: uppercase; font-size: 0.62rem; letter-spacing: 0.5px; }
 
 /* ---------- Modal ---------- */
@@ -890,7 +874,7 @@ body.no-scroll { overflow: hidden; }
   .doc-row, .trash-row { flex-wrap: wrap; }
   .vault-row strong, .vault-row span,
   .doc-name, .doc-meta,
-  .trash-row span, .dossier-chip { overflow-wrap: anywhere; }
+  .trash-row span { overflow-wrap: anywhere; }
 
   /* Pulsanti comodi da toccare col pollice: sul computer restano compatti. */
   .btn { min-height: 44px; }
