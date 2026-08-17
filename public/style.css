@@ -535,10 +535,35 @@ input:focus, textarea:focus, select:focus {
   display: flex; align-items: center; gap: 10px; margin-top: 9px; padding: 9px 11px;
   border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2);
 }
+.entry-doc-clickable { cursor: pointer; }
+.entry-doc-clickable:hover { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 .entry-doc-ext { font-size: 10px; font-family: var(--font-mono); color: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 3px; padding: 3px 5px; flex: none; }
+.entry-doc-thumb { width: 30px; height: 30px; flex: none; object-fit: cover; border-radius: 3px; border: 1px solid var(--border); display: block; }
 .entry-doc-name { flex: 1; min-width: 0; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .entry-doc-original { font-size: 10.5px; color: var(--text-faint); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .entry-doc-meta { font-size: 10px; color: var(--text-faint); font-family: var(--font-mono); white-space: nowrap; flex: none; }
+
+/* ---------- Anteprima documento a schermo intero ---------- */
+.preview-backdrop {
+  position: fixed; inset: 0; background: rgba(6,7,11,0.82);
+  display: flex; align-items: center; justify-content: center; z-index: 150; padding: 24px;
+}
+.preview-box {
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius);
+  width: 100%; max-width: 1000px; height: 90vh; display: flex; flex-direction: column; overflow: hidden;
+}
+.preview-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border-soft); flex: none;
+}
+.preview-title { font-size: 12.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview-close {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 1rem; min-width: 34px; min-height: 34px; border-radius: var(--radius-sm);
+}
+.preview-close:hover { color: var(--text); background: var(--surface-hover); }
+.preview-media { flex: 1; min-height: 0; width: 100%; border: none; }
+img.preview-media { object-fit: contain; background: #0a0a0a; }
 .entry-progress { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
 .entry-progress-track { flex: 1; height: 3px; background: rgba(233,233,237,0.1); border-radius: 2px; overflow: hidden; }
 .entry-progress-fill { height: 100%; background: var(--accent); }

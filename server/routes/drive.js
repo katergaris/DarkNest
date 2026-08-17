@@ -55,6 +55,24 @@ router.get('/:id/download', (req, res) => {
   res.download(filePath, doc.original_name);
 });
 
+// Serve il file inline (anteprima), solo per i tipi che si possono mostrare
+// in sicurezza nel browser. Niente SVG: puo' contenere <script> ed eseguirebbe
+// nell'origine dell'app se mostrato inline. Gli altri tipi restano scaricabili
+// da /download ma non hanno un'anteprima.
+const PREVIEWABLE_MIME = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf']);
+
+router.get('/:id/view', (req, res) => {
+  const doc = db.prepare('SELECT * FROM documents WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
+  if (!doc) return res.status(404).json({ error: 'Documento non trovato' });
+  if (!PREVIEWABLE_MIME.has(doc.mime)) return res.status(415).json({ error: 'Anteprima non disponibile per questo tipo di file' });
+  const filePath = path.join(UPLOAD_DIR, path.basename(doc.stored_name));
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File mancante su disco' });
+  res.set('Content-Type', doc.mime);
+  res.set('Content-Disposition', 'inline');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.sendFile(filePath);
+});
+
 router.put('/:id', (req, res) => {
   const existing = db.prepare('SELECT * FROM documents WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Documento non trovato' });

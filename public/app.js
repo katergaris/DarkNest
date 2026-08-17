@@ -104,8 +104,47 @@
     if (activeModal) { activeModal.remove(); activeModal = null; }
   }
 
+  // ---------------- Anteprima documento a schermo intero ----------------
+  const PREVIEWABLE_MIME = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf']);
+  let activePreview = null;
+
+  function closePreview() {
+    if (activePreview) { activePreview.remove(); activePreview = null; }
+  }
+
+  function openDocumentPreview(doc) {
+    if (!PREVIEWABLE_MIME.has(doc.mime)) return;
+    closePreview();
+    const label = doc.display_name || doc.original_name;
+    const url = `/api/drive/${doc.id}/view`;
+    const backdrop = el('<div class="preview-backdrop"></div>');
+    const box = el(`
+      <div class="preview-box">
+        <div class="preview-head">
+          <span class="preview-title"></span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <a class="btn btn-sm" href="/api/drive/${doc.id}/download">Scarica</a>
+            <button type="button" class="preview-close" aria-label="Chiudi">✕</button>
+          </div>
+        </div>
+      </div>
+    `);
+    box.querySelector('.preview-title').textContent = label;
+    box.querySelector('.preview-close').addEventListener('click', closePreview);
+    if (doc.mime.startsWith('image/')) {
+      box.appendChild(el(`<img class="preview-media" src="${url}" alt="${esc(label)}" />`));
+    } else {
+      box.appendChild(el(`<iframe class="preview-media preview-frame" src="${url}" title="${esc(label)}"></iframe>`));
+    }
+    backdrop.appendChild(box);
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closePreview(); });
+    document.body.appendChild(backdrop);
+    activePreview = backdrop;
+  }
+
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
+    closePreview();
     closeModal();
     const backdrop = document.getElementById('sheet-backdrop');
     if (backdrop && !backdrop.classList.contains('hidden')) {
@@ -635,16 +674,22 @@
     } else if (item.kind === 'documento') {
       body.appendChild(el(`<div class="entry-text">Caricato: ${escTrim(item.display_name || item.original_name, 160)}</div>`));
       const ext = (item.original_name.includes('.') ? item.original_name.split('.').pop() : '').toUpperCase().slice(0, 4);
-      body.appendChild(el(`
-        <div class="entry-doc">
-          <span class="entry-doc-ext">${esc(ext || 'FILE')}</span>
+      const previewable = PREVIEWABLE_MIME.has(item.mime);
+      const isImage = (item.mime || '').startsWith('image/');
+      const docBox = el(`
+        <div class="entry-doc${previewable ? ' entry-doc-clickable' : ''}">
+          ${isImage
+            ? `<img class="entry-doc-thumb" src="/api/drive/${item.id}/view" alt="" />`
+            : `<span class="entry-doc-ext">${esc(ext || 'FILE')}</span>`}
           <div style="flex:1;min-width:0">
             <div class="entry-doc-name">${esc(item.display_name || item.original_name)}</div>
             ${item.display_name ? `<div class="entry-doc-original">${esc(item.original_name)}</div>` : ''}
             <div class="entry-doc-meta">${fmtSize(item.size)}${item.folder ? ' · ' + esc(item.folder) : ''}</div>
           </div>
         </div>
-      `));
+      `);
+      if (previewable) docBox.addEventListener('click', () => openDocumentPreview(item));
+      body.appendChild(docBox);
     } else if (item.kind === 'progetto') {
       body.appendChild(el(`<div class="entry-text">${esc(item.title)}</div>`));
       const { done, total } = checklistProgress(item.checklist);
@@ -1708,12 +1753,22 @@
     }
 
     docs.forEach((d) => {
+      const ext = (d.original_name.includes('.') ? d.original_name.split('.').pop() : '').toUpperCase().slice(0, 4);
+      const previewable = PREVIEWABLE_MIME.has(d.mime);
+      const isImage = (d.mime || '').startsWith('image/');
       const row = el(`
         <div class="doc-row row-card">
-          <div>
-            <div class="doc-name">${esc(d.display_name || d.original_name)}</div>
-            ${d.display_name ? `<div class="doc-original">${esc(d.original_name)}</div>` : ''}
-            <div class="doc-meta">${d.folder ? esc(d.folder) + ' · ' : ''}${fmtSize(d.size)}${d.expiry_date ? ' · scade ' + fmtDate(d.expiry_date) : ''}</div>
+          <div style="display:flex;gap:10px;align-items:center;min-width:0">
+            <div class="entry-doc${previewable ? ' entry-doc-clickable' : ''}" style="margin-top:0;flex:none">
+              ${isImage
+                ? `<img class="entry-doc-thumb" src="/api/drive/${d.id}/view" alt="" />`
+                : `<span class="entry-doc-ext">${esc(ext || 'FILE')}</span>`}
+            </div>
+            <div style="min-width:0">
+              <div class="doc-name">${esc(d.display_name || d.original_name)}</div>
+              ${d.display_name ? `<div class="doc-original">${esc(d.original_name)}</div>` : ''}
+              <div class="doc-meta">${d.folder ? esc(d.folder) + ' · ' : ''}${fmtSize(d.size)}${d.expiry_date ? ' · scade ' + fmtDate(d.expiry_date) : ''}</div>
+            </div>
           </div>
           <span class="card-actions" style="padding:0">
             <a class="btn btn-sm" href="/api/drive/${d.id}/download">Scarica</a>
@@ -1723,6 +1778,7 @@
           </span>
         </div>
       `);
+      if (previewable) row.querySelector('.entry-doc').addEventListener('click', () => openDocumentPreview(d));
       row.querySelector('[data-edit]').addEventListener('click', () => {
         const form = documentModal(d);
         form.addEventListener('submit', async (e) => {
