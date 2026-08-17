@@ -822,6 +822,23 @@
 
   // ---- Vista Bacheca: i progetti in kanban, spostabili tra gli stati che hanno gia' ----
   function renderFlussoBacheca(root, projects) {
+    const header = el('<div class="view-header-actions" style="margin-bottom:14px;justify-content:flex-end"><button class="btn btn-primary" id="bacheca-new-project">+ Nuovo progetto</button></div>');
+    header.querySelector('#bacheca-new-project').addEventListener('click', () => {
+      const form = projectModal();
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tags = parseTags(form);
+        const contacts = parseContacts(form);
+        const budget = parseBudgetLines(form.budget.value);
+        const checklist = collectChecklist(form, []);
+        await api('/projects', { method: 'POST', body: JSON.stringify({ title: form.title.value, description: form.description.value, status: form.status.value, deadline: form.deadline.value || null, checklist, contacts, budget, tags }) });
+        closeModal(); toast('Progetto creato'); render('flusso', { tab: 'bacheca' });
+      });
+      form.querySelector('[data-cancel]').addEventListener('click', closeModal);
+      openModal('Nuovo progetto', form);
+    });
+    root.appendChild(header);
+
     if (!projects.length) {
       root.appendChild(el('<div class="empty-state">Nessun progetto ancora.</div>'));
       return;
