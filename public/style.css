@@ -691,8 +691,12 @@ img.preview-media { object-fit: contain; background: #0a0a0a; }
 .trash-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 10px;
   padding: 10px 14px;
 }
+.trash-row > span:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.trash-row > button, .trash-row > a { flex: none; }
 
 /* ---------- Toast ---------- */
 .toast {
@@ -873,8 +877,7 @@ body.no-scroll { overflow: hidden; }
   .vault-row > *, .doc-row > *, .trash-row > * { min-width: 0; }
   .doc-row, .trash-row { flex-wrap: wrap; }
   .vault-row strong, .vault-row span,
-  .doc-name, .doc-meta,
-  .trash-row span { overflow-wrap: anywhere; }
+  .doc-name, .doc-meta { overflow-wrap: anywhere; }
 
   /* Pulsanti comodi da toccare col pollice: sul computer restano compatti. */
   .btn { min-height: 44px; }
